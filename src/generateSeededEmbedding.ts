@@ -17,7 +17,7 @@ class SeededRandom {
 }
 
 // Generate a deterministic "random" embedding based on seed
-export const generateSeededEmbedding = (
+export const generateEmbeddingFromSeed = (
   seed: number,
   dimensions = 512
 ): number[] => {

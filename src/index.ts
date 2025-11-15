@@ -5,7 +5,7 @@ import { MODEL_NAME } from "./config";
 import dashboard from "./dashboard.html";
 import { db, embeddings } from "./db";
 import { computeTextEmbedding } from "./embeddings";
-import { generateSeededEmbedding } from "./generateSeededEmbedding";
+import { generateEmbeddingFromSeed } from "./generateSeededEmbedding";
 
 const Limit = z.coerce.number().default(40);
 
@@ -20,8 +20,7 @@ const server = serve({
         const limit = Limit.parse(url.searchParams.get("limit"));
 
         try {
-          // Generate a seeded embedding
-          const seedEmbedding = generateSeededEmbedding(seed);
+          const seedEmbedding = generateEmbeddingFromSeed(seed);
 
           // Find images similar to this random embedding
           const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(seedEmbedding)}))`;
