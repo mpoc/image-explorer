@@ -4,7 +4,7 @@ import { z } from "zod";
 import { MODEL_NAME } from "./config";
 import dashboard from "./dashboard.html";
 import { db, embeddings } from "./db";
-import { fetchTextEmbedding } from "./embeddings";
+import { computeTextEmbedding } from "./embeddings";
 
 // Seeded random number generator
 class SeededRandom {
@@ -176,7 +176,7 @@ const server = serve({
 
         try {
           // Get the embedding for the search text
-          const textEmbedding = await fetchTextEmbedding(text);
+          const textEmbedding = await computeTextEmbedding(text);
 
           const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(textEmbedding)}))`;
 

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { MODEL_NAME } from "./config";
 import { db, embeddings } from "./db";
-import { fetchImageEmbedding } from "./embeddings";
+import { computeImageEmbedding } from "./embeddings";
 
 const generateIdempotencyKey = (filename: string, model: string): string =>
   `${filename}:${model}` as const;
@@ -22,7 +22,7 @@ const getEmbedding = async (imagePath: string): Promise<number[]> => {
   }
 
   console.log("🔄 Generating new embedding...");
-  const embeddingArray = await fetchImageEmbedding(imagePath);
+  const embeddingArray = await computeImageEmbedding(imagePath);
 
   console.log("📝 Storing embedding in database...");
 

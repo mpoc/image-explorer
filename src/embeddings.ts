@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { EMBEDDING_API_BASE_URL } from "./config";
 import { EmbeddingRecord } from "./types";
 
-export const fetchTextEmbedding = async (text: string) => {
+export const computeTextEmbedding = async (text: string) => {
   const response = await fetch(`${EMBEDDING_API_BASE_URL}/embed_text`, {
     method: "POST",
     headers: {
@@ -21,7 +21,7 @@ export const fetchTextEmbedding = async (text: string) => {
   const data = await response.json();
   return EmbeddingRecord.parse(data).embedding;
 };
-export const fetchImageEmbedding = async (imagePath: string) => {
+export const computeImageEmbedding = async (imagePath: string) => {
   const image = imagePath.startsWith("http")
     ? imagePath
     : readFileSync(imagePath).toString("base64");
