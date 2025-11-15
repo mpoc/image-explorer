@@ -102,11 +102,6 @@ export default function App() {
     }
   };
 
-  // const handleImageClick = (image: ImageResult) => {
-  //   setQuery({ id: image.id, seed: null, text: null }, { history: "push" });
-  //   window.scrollTo(0, 0);
-  // };
-
   const handleNewSeed = () => {
     const newSeed = Math.floor(Math.random() * 1_000_000);
     setQuery({ seed: newSeed, id: null, text: null }, { history: "push" });
