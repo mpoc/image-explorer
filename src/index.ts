@@ -5,7 +5,7 @@ import { MODEL_NAME } from "./config";
 import dashboard from "./dashboard.html";
 import { db, embeddings } from "./db";
 import { computeTextEmbedding } from "./embeddings";
-import { generateEmbeddingFromSeed } from "./generateSeededEmbedding";
+import { generateEmbeddingFromSeed } from "./generateEmbeddingFromSeed";
 
 const Limit = z.coerce.number().default(40);
 
