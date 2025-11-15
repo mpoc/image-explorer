@@ -7,7 +7,7 @@ import { db, embeddings } from "./db";
 import { computeTextEmbedding } from "./embeddings";
 import { generateEmbeddingFromSeed } from "./generateEmbeddingFromSeed";
 
-const Limit = z.coerce.number().default(40);
+const number = (input: unknown): number => z.coerce.number().parse(input);
 
 const server = serve({
   port: 3000,
@@ -16,8 +16,8 @@ const server = serve({
     "/api/random": {
       async GET(req) {
         const url = new URL(req.url);
-        const seed = Number.parseInt(url.searchParams.get("seed") || "42", 10);
-        const limit = Limit.parse(url.searchParams.get("limit"));
+        const seed = number(url.searchParams.get("seed") || "42");
+        const limit = number(url.searchParams.get("limit") || "40");
 
         try {
           const seedEmbedding = generateEmbeddingFromSeed(seed);
@@ -60,8 +60,8 @@ const server = serve({
     "/api/similar": {
       async GET(req) {
         const url = new URL(req.url);
-        const id = Number.parseInt(url.searchParams.get("id") || "0", 10);
-        const limit = Limit.parse(url.searchParams.get("limit"));
+        const id = number(url.searchParams.get("id"));
+        const limit = number(url.searchParams.get("limit") || "40");
 
         if (!id) {
           return Response.json(
@@ -126,7 +126,7 @@ const server = serve({
       async GET(req) {
         const url = new URL(req.url);
         const text = url.searchParams.get("text");
-        const limit = Limit.parse(url.searchParams.get("limit"));
+        const limit = number(url.searchParams.get("limit") || "40");
 
         if (!text) {
           return Response.json(
