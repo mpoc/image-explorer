@@ -1,8 +1,9 @@
 import { serve } from "bun";
 import { and, asc, eq, lte, not, sql } from "drizzle-orm";
 import { z } from "zod";
-import { MODEL_NAME } from "./config";
+import { EMBEDDING_API_BASE_URL, MODEL_NAME } from "./config";
 import { db, embeddings } from "./db";
+import { EmbeddingRecord } from "./types";
 
 // Seeded random number generator
 class SeededRandom {
@@ -41,6 +42,26 @@ const generateSeededEmbedding = (seed: number): number[] => {
   }
 
   return embedding;
+};
+
+const fetchTextEmbedding = async (text: string) => {
+  const response = await fetch(`${EMBEDDING_API_BASE_URL}/embed_text`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ text }),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Embedding API error: ${response.status} ${response.statusText}`,
+      { cause: await response.text() }
+    );
+  }
+
+  const data = await response.json();
+  return EmbeddingRecord.parse(data).embedding;
 };
 
 const Limit = z.coerce.number().default(40);
@@ -154,6 +175,52 @@ const server = serve({
             results,
           });
         } catch (error) {
+          return Response.json({ error: String(error) }, { status: 500 });
+        }
+      },
+    },
+    "/api/search": {
+      async GET(req) {
+        const url = new URL(req.url);
+        const text = url.searchParams.get("text");
+        const limit = Limit.parse(url.searchParams.get("limit"));
+
+        if (!text) {
+          return Response.json(
+            { error: "Missing text parameter" },
+            { status: 400 }
+          );
+        }
+
+        try {
+          // Get the embedding for the search text
+          const textEmbedding = await fetchTextEmbedding(text);
+
+          const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(textEmbedding)}))`;
+
+          // Find images similar to this text embedding
+          const results = await db
+            .select({
+              id: embeddings.id,
+              filename: embeddings.filename,
+              distance: distanceExpression,
+            })
+            .from(embeddings)
+            .where(eq(embeddings.model, MODEL_NAME))
+            .orderBy(asc(distanceExpression))
+            .limit(limit)
+            .all();
+
+          console.log(
+            `Found ${results.length} images matching text: "${text}"`
+          );
+
+          return Response.json({
+            query: text,
+            results,
+          });
+        } catch (error) {
+          console.error("Error in /api/search_by_text:", error);
           return Response.json({ error: String(error) }, { status: 500 });
         }
       },
