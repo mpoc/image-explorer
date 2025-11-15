@@ -1,10 +1,10 @@
 import { serve } from "bun";
 import { and, asc, eq, lte, not, sql } from "drizzle-orm";
 import { z } from "zod";
-import { EMBEDDING_API_BASE_URL, MODEL_NAME } from "./config";
+import { MODEL_NAME } from "./config";
 import dashboard from "./dashboard.html";
 import { db, embeddings } from "./db";
-import { EmbeddingRecord } from "./types";
+import { fetchTextEmbedding } from "./fetchTextEmbedding";
 
 // Seeded random number generator
 class SeededRandom {
@@ -43,26 +43,6 @@ const generateSeededEmbedding = (seed: number): number[] => {
   }
 
   return embedding;
-};
-
-const fetchTextEmbedding = async (text: string) => {
-  const response = await fetch(`${EMBEDDING_API_BASE_URL}/embed_text`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ text }),
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `Embedding API error: ${response.status} ${response.statusText}`,
-      { cause: await response.text() }
-    );
-  }
-
-  const data = await response.json();
-  return EmbeddingRecord.parse(data).embedding;
 };
 
 const Limit = z.coerce.number().default(40);
