@@ -225,6 +225,55 @@ const server = serve({
         }
       },
     },
+    "/api/proxy": {
+      async GET(req) {
+        const url = new URL(req.url);
+        const imageUrl = url.searchParams.get("url");
+
+        if (!imageUrl) {
+          return Response.json(
+            { error: "Missing url parameter" },
+            { status: 400 }
+          );
+        }
+
+        try {
+          const response = await fetch(imageUrl, {
+            headers: {
+              ...(process.env.AUTHORIZATION
+                ? { Authorization: process.env.AUTHORIZATION }
+                : {}),
+            },
+          });
+
+          if (!response.ok) {
+            return Response.json(
+              {
+                error: `Failed to fetch image: ${response.status} ${response.statusText}`,
+              },
+              { status: response.status }
+            );
+          }
+
+          const contentType = response.headers.get("content-type");
+
+          console.log(
+            new Date().toISOString(),
+            `Proxied image from ${imageUrl} with content type ${contentType}`
+          );
+
+          return new Response(response.body, {
+            headers: {
+              ...(contentType ? { "Content-Type": contentType } : {}),
+              "Access-Control-Allow-Origin": "*",
+              "Cache-Control": "public, max-age=31536000",
+            },
+          });
+        } catch (error) {
+          return Response.json({ error: String(error) }, { status: 500 });
+        }
+      },
+    },
   },
 
   development: process.env.NODE_ENV !== "production" && {
