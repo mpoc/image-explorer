@@ -19,6 +19,11 @@ type SearchResponse = {
   results: ImageResult[];
 };
 
+type SelectedImageProps = {
+  id: number;
+  filename: string;
+};
+
 const transformImageUrl = (url: string) => {
   const parsedUrl = new URL(url);
   const parts = parsedUrl.pathname.split("/");
@@ -31,10 +36,9 @@ const transformImageUrl = (url: string) => {
 
 export default function App() {
   const [images, setImages] = useState<ImageResult[]>([]);
-  const [selectedImage, setSelectedImage] = useState<{
-    id: number;
-    filename: string;
-  } | null>(null);
+  const [selectedImage, setSelectedImage] = useState<SelectedImageProps | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useQueryStates({
@@ -172,32 +176,7 @@ export default function App() {
           )}
         </div>
 
-        {selectedImage && (
-          <div className="mb-6 border-2 border-zinc-700 bg-zinc-900 p-4">
-            <h3 className="mb-3 font-medium text-sm text-zinc-400 uppercase tracking-wide">
-              Selected
-            </h3>
-            <div className="mx-auto w-fit border border-zinc-800 bg-zinc-950">
-              <img
-                className="block h-auto max-h-[700px] w-full object-contain"
-                src={`/api/proxy?url=${encodeURIComponent(selectedImage.filename)}`}
-              />
-              <div className="border-zinc-800 border-t p-3">
-                <div className="text-sm text-zinc-400">
-                  ID:{" "}
-                  <a
-                    className="text-zinc-300 underline decoration-zinc-700 underline-offset-2 transition-colors hover:text-zinc-100 hover:decoration-zinc-500"
-                    href={transformImageUrl(selectedImage.filename)}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    {selectedImage.id}
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {selectedImage && <SelectedImage {...selectedImage} />}
 
         {loading && (
           <div className="py-24 text-center text-zinc-500">
@@ -264,4 +243,31 @@ const Image = ({ image }: { image: ImageResult }) => (
       </div>
     </div>
   </a>
+);
+
+const SelectedImage = (selectedImage: SelectedImageProps) => (
+  <div className="mb-6 border-2 border-zinc-700 bg-zinc-900 p-4">
+    <h3 className="mb-3 font-medium text-sm text-zinc-400 uppercase tracking-wide">
+      Selected
+    </h3>
+    <div className="mx-auto w-fit border border-zinc-800 bg-zinc-950">
+      <img
+        className="block h-auto max-h-[700px] w-full object-contain"
+        src={`/api/proxy?url=${encodeURIComponent(selectedImage.filename)}`}
+      />
+      <div className="border-zinc-800 border-t p-3">
+        <div className="text-sm text-zinc-400">
+          ID:{" "}
+          <a
+            className="text-zinc-300 underline decoration-zinc-700 underline-offset-2 transition-colors hover:text-zinc-100 hover:decoration-zinc-500"
+            href={transformImageUrl(selectedImage.filename)}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            {selectedImage.id}
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 );
