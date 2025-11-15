@@ -2,6 +2,7 @@ import { serve } from "bun";
 import { and, asc, eq, lte, not, sql } from "drizzle-orm";
 import { z } from "zod";
 import { EMBEDDING_API_BASE_URL, MODEL_NAME } from "./config";
+import dashboard from "./dashboard.html";
 import { db, embeddings } from "./db";
 import { EmbeddingRecord } from "./types";
 
@@ -69,6 +70,7 @@ const Limit = z.coerce.number().default(40);
 const server = serve({
   port: 3000,
   routes: {
+    "/": dashboard,
     "/api/random": {
       async GET(req) {
         const url = new URL(req.url);
