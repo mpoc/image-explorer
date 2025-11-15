@@ -4,7 +4,7 @@ import { z } from "zod";
 import { MODEL_NAME } from "./config";
 import dashboard from "./dashboard.html";
 import { db, embeddings } from "./db";
-import { fetchTextEmbedding } from "./fetchTextEmbedding";
+import { fetchTextEmbedding } from "./embeddings";
 
 // Seeded random number generator
 class SeededRandom {
