@@ -223,35 +223,7 @@ export default function App() {
             >
               <Masonry gutter="6px">
                 {images.map((image) => (
-                  <a
-                    className="block cursor-pointer border border-zinc-800 bg-zinc-900 transition-all hover:border-zinc-600"
-                    href={`?id=${image.id}`}
-                    key={image.id}
-                    onClick={() => window.scrollTo(0, 0)}
-                  >
-                    <img
-                      className="block h-auto w-full"
-                      loading="lazy"
-                      src={`/api/proxy?url=${encodeURIComponent(image.filename.replace(/image$/, "thumbnail"))}`}
-                    />
-                    <div className="flex items-center justify-between border-zinc-800 border-t p-2">
-                      <div className="text-xs text-zinc-500">
-                        ID:{" "}
-                        <a
-                          className="text-zinc-400 underline decoration-zinc-800 underline-offset-2 transition-colors hover:text-zinc-200 hover:decoration-zinc-600"
-                          href={transformImageUrl(image.filename)}
-                          onClick={(e) => e.stopPropagation()}
-                          rel="noopener noreferrer"
-                          target="_blank"
-                        >
-                          {image.id}
-                        </a>
-                      </div>
-                      <div className="text-xs text-zinc-400">
-                        {(1 - image.distance).toFixed(4)}
-                      </div>
-                    </div>
-                  </a>
+                  <Image image={image} key={image.id} />
                 ))}
               </Masonry>
             </ResponsiveMasonry>
@@ -261,3 +233,35 @@ export default function App() {
     </div>
   );
 }
+
+const Image = ({ image }: { image: ImageResult }) => (
+  <a
+    className="block cursor-pointer border border-zinc-800 bg-zinc-900 transition-all hover:border-zinc-600"
+    href={`?id=${image.id}`}
+    key={image.id}
+    onClick={() => window.scrollTo(0, 0)}
+  >
+    <img
+      className="block h-auto w-full"
+      loading="lazy"
+      src={`/api/proxy?url=${encodeURIComponent(image.filename.replace(/image$/, "thumbnail"))}`}
+    />
+    <div className="flex items-center justify-between border-zinc-800 border-t p-2">
+      <div className="text-xs text-zinc-500">
+        ID:{" "}
+        <a
+          className="text-zinc-400 underline decoration-zinc-800 underline-offset-2 transition-colors hover:text-zinc-200 hover:decoration-zinc-600"
+          href={transformImageUrl(image.filename)}
+          onClick={(e) => e.stopPropagation()}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          {image.id}
+        </a>
+      </div>
+      <div className="text-xs text-zinc-400">
+        {(1 - image.distance).toFixed(4)}
+      </div>
+    </div>
+  </a>
+);
