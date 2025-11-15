@@ -17,20 +17,23 @@ class SeededRandom {
 }
 
 // Generate a deterministic "random" embedding based on seed
-export const generateSeededEmbedding = (seed: number): number[] => {
+export const generateSeededEmbedding = (
+  seed: number,
+  dimensions = 512
+): number[] => {
   const rng = new SeededRandom(seed);
-  const embedding = new Array(512);
+  const embedding = new Array(dimensions);
 
   // Generate normalized random vector
   let sumSquares = 0;
-  for (let i = 0; i < 512; i++) {
+  for (let i = 0; i < dimensions; i++) {
     embedding[i] = rng.next() * 2 - 1; // Range [-1, 1]
     sumSquares += embedding[i] * embedding[i];
   }
 
   // Normalize to unit vector
   const magnitude = Math.sqrt(sumSquares);
-  for (let i = 0; i < 512; i++) {
+  for (let i = 0; i < dimensions; i++) {
     embedding[i] /= magnitude;
   }
 
