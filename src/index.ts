@@ -1,5 +1,5 @@
 import { serve } from "bun";
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, lte, not, sql } from "drizzle-orm";
 import { z } from "zod";
 import { MODEL_NAME } from "./config";
 import { db, embeddings } from "./db";
@@ -89,6 +89,71 @@ const server = serve({
           return Response.json(results);
         } catch (error) {
           console.error("Error in /api/random:", error);
+          return Response.json({ error: String(error) }, { status: 500 });
+        }
+      },
+    },
+    "/api/similar": {
+      async GET(req) {
+        const url = new URL(req.url);
+        const id = Number.parseInt(url.searchParams.get("id") || "0", 10);
+        const limit = Limit.parse(url.searchParams.get("limit"));
+
+        if (!id) {
+          return Response.json(
+            { error: "Missing id parameter" },
+            { status: 400 }
+          );
+        }
+
+        try {
+          // First, get the embedding for the source image
+          const sourceResult = await db
+            .select({
+              embedding: embeddings.embedding,
+              filename: embeddings.filename,
+            })
+            .from(embeddings)
+            .where(and(eq(embeddings.id, id), eq(embeddings.model, MODEL_NAME)))
+            .limit(1)
+            .all();
+
+          const [source] = sourceResult;
+          if (!source) {
+            return Response.json({ error: "Image not found" }, { status: 404 });
+          }
+
+          const sourceEmbedding = source.embedding;
+          const sourceFilename = source.filename;
+
+          const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(sourceEmbedding)}))`;
+
+          // Find similar images
+          const results = await db
+            .select({
+              id: embeddings.id,
+              filename: embeddings.filename,
+              distance: distanceExpression,
+            })
+            .from(embeddings)
+            .where(
+              and(
+                not(eq(embeddings.id, id)), // Exclude the source image itself
+                eq(embeddings.model, MODEL_NAME),
+                lte(distanceExpression, 0.2)
+              )
+            )
+            .orderBy(asc(distanceExpression))
+            .limit(limit)
+            .all();
+
+          console.log(`Found ${results.length} similar images for ID ${id}`);
+
+          return Response.json({
+            source: { id, filename: sourceFilename },
+            results,
+          });
+        } catch (error) {
           return Response.json({ error: String(error) }, { status: 500 });
         }
       },
