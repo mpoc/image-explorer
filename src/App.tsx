@@ -214,12 +214,15 @@ export default function App() {
 }
 
 const Image = ({ image }: { image: ImageResult }) => (
-  <a
-    className="block cursor-pointer border border-zinc-800 bg-zinc-900 transition-all hover:border-zinc-600"
-    href={`?id=${image.id}`}
+  <div
+    className="relative block border border-zinc-800 bg-zinc-900 transition-all hover:border-zinc-600"
     key={image.id}
-    onClick={() => window.scrollTo(0, 0)}
   >
+    <a
+      className="absolute inset-0 z-0"
+      href={`?id=${image.id}`}
+      onClick={() => window.scrollTo(0, 0)}
+    />
     <img
       className="block h-auto w-full"
       loading="lazy"
@@ -229,9 +232,8 @@ const Image = ({ image }: { image: ImageResult }) => (
       <div className="text-xs text-zinc-500">
         ID:{" "}
         <a
-          className="text-zinc-400 underline decoration-zinc-800 underline-offset-2 transition-colors hover:text-zinc-200 hover:decoration-zinc-600"
+          className="relative z-10 text-zinc-400 underline decoration-zinc-800 underline-offset-2 transition-colors hover:text-zinc-200 hover:decoration-zinc-600"
           href={transformImageUrl(image.filename)}
-          onClick={(e) => e.stopPropagation()}
           rel="noopener noreferrer"
           target="_blank"
         >
@@ -242,7 +244,7 @@ const Image = ({ image }: { image: ImageResult }) => (
         {(1 - image.distance).toFixed(4)}
       </div>
     </div>
-  </a>
+  </div>
 );
 
 const SelectedImage = ({ image }: { image: SelectedImageProps }) => (
