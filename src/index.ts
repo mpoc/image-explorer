@@ -1,4 +1,4 @@
-import { serve } from "bun";
+import Bun, { serve } from "bun";
 import { and, asc, eq, lte, not, sql } from "drizzle-orm";
 import { z } from "zod";
 import { MODEL_NAME } from "./config";
@@ -170,17 +170,36 @@ const server = serve({
     },
     "/api/proxy": {
       async GET(req) {
-        const url = new URL(req.url);
-        const imageUrl = url.searchParams.get("url");
-
-        if (!imageUrl) {
-          return Response.json(
-            { error: "Missing url parameter" },
-            { status: 400 }
-          );
-        }
+        const params = new URL(req.url).searchParams;
 
         try {
+          const urlFromParam = z.url().safeParse(params.get("url"));
+          if (!urlFromParam.success) {
+            return Response.json(
+              { error: "Missing url parameter" },
+              { status: 400 }
+            );
+          }
+
+          const imageUrl = new URL(urlFromParam.data);
+
+          // Proxy local files directly through Bun.file instead of fetch assuming better performance
+          if (imageUrl.protocol === "file:") {
+            const file = Bun.file(imageUrl);
+
+            console.log(
+              new Date().toISOString(),
+              `Proxied local file from ${imageUrl.toString()}`
+            );
+
+            return new Response(file, {
+              headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "public, max-age=31536000",
+              },
+            });
+          }
+
           const response = await fetch(imageUrl, {
             headers: {
               ...(process.env.AUTHORIZATION

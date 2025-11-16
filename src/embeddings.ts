@@ -24,7 +24,7 @@ export const computeTextEmbedding = async (text: string) => {
 export const computeImageEmbedding = async (imagePath: string) => {
   const image = imagePath.startsWith("http")
     ? imagePath
-    : readFileSync(imagePath).toString("base64");
+    : readFileSync(new URL(imagePath)).toString("base64");
 
   const response = await fetch(`${EMBEDDING_API_BASE_URL}/embed`, {
     method: "POST",
