@@ -93,6 +93,7 @@ const server = serve({
           const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(sourceEmbedding)}))`;
 
           // Find similar images
+          const startedAt = performance.now();
           const results = await db
             .select({
               id: embeddings.id,
@@ -110,8 +111,11 @@ const server = serve({
             .orderBy(asc(distanceExpression))
             .limit(limit)
             .all();
+          const endedAt = performance.now();
 
-          console.log(`Found ${results.length} similar images for ID ${id}`);
+          console.log(
+            `Found ${results.length} similar images for ID ${id}, took ${(endedAt - startedAt).toFixed(2)} ms`
+          );
 
           return Response.json({
             source: { id, filename: sourceFilename },
