@@ -1,5 +1,5 @@
 import Bun, { serve } from "bun";
-import { and, asc, eq, inArray, lte, not, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, not, sql } from "drizzle-orm";
 import { z } from "zod";
 import { MODEL_NAME } from "./config";
 import dashboard from "./dashboard.html";
@@ -29,6 +29,7 @@ const server = serve({
         const url = new URL(req.url);
         const seed = number(url.searchParams.get("seed") || "42");
         const limit = number(url.searchParams.get("limit") || "40");
+        const offset = number(url.searchParams.get("offset") || "0");
 
         try {
           const seedEmbedding = generateEmbeddingFromSeed(seed);
@@ -46,13 +47,14 @@ const server = serve({
             .where(eq(embeddings.model, MODEL_NAME))
             .orderBy(asc(distanceExpression))
             .limit(limit)
+            .offset(offset)
             .all();
 
           console.log(
-            `Generated ${results.length} random images for seed ${seed}`
+            `Generated ${results.length} random images for seed ${seed} (offset=${offset})`
           );
 
-          if (results.length === 0) {
+          if (results.length === 0 && offset === 0) {
             console.warn({
               message: "No images found for random seed",
               seed,
@@ -61,7 +63,10 @@ const server = serve({
             });
           }
 
-          return Response.json(results);
+          return Response.json({
+            results,
+            hasMore: results.length === limit,
+          });
         } catch (error) {
           console.error("Error in /api/random:", error);
           return Response.json({ error: String(error) }, { status: 500 });
@@ -73,6 +78,7 @@ const server = serve({
         const url = new URL(req.url);
         const idList = parseIdList(url.searchParams.get("id"));
         const limit = number(url.searchParams.get("limit") || "40");
+        const offset = number(url.searchParams.get("offset") || "0");
 
         if (idList.length === 0) {
           return Response.json(
@@ -129,17 +135,17 @@ const server = serve({
             .where(
               and(
                 not(inArray(embeddings.id, idList)), // Exclude all path images, TODO: Rethink this approach, maybe only exclude last image?
-                eq(embeddings.model, MODEL_NAME),
-                lte(distanceExpression, 0.2)
+                eq(embeddings.model, MODEL_NAME)
               )
             )
             .orderBy(asc(distanceExpression))
             .limit(limit)
+            .offset(offset)
             .all();
           const endedAt = performance.now();
 
           console.log(
-            `Found ${results.length} similar images for path [${idList.join(",")}], took ${(endedAt - startedAt).toFixed(2)} ms`
+            `Found ${results.length} similar images for path [${idList.join(",")}] (offset=${offset}), took ${(endedAt - startedAt).toFixed(2)} ms`
           );
 
           return Response.json({
@@ -149,6 +155,7 @@ const server = serve({
             })),
             mode: extrapolator.name,
             results,
+            hasMore: results.length === limit,
           });
         } catch (error) {
           return Response.json({ error: String(error) }, { status: 500 });
@@ -160,6 +167,7 @@ const server = serve({
         const url = new URL(req.url);
         const text = url.searchParams.get("text");
         const limit = number(url.searchParams.get("limit") || "40");
+        const offset = number(url.searchParams.get("offset") || "0");
 
         if (!text) {
           return Response.json(
@@ -185,15 +193,17 @@ const server = serve({
             .where(eq(embeddings.model, MODEL_NAME))
             .orderBy(asc(distanceExpression))
             .limit(limit)
+            .offset(offset)
             .all();
 
           console.log(
-            `Found ${results.length} images matching text: "${text}"`
+            `Found ${results.length} images matching text: "${text}" (offset=${offset})`
           );
 
           return Response.json({
             query: text,
             results,
+            hasMore: results.length === limit,
           });
         } catch (error) {
           console.error("Error in /api/search_by_text:", error);

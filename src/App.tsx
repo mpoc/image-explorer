@@ -1,5 +1,5 @@
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
 import { cn } from "./utils";
 import "./index.css";
@@ -13,17 +13,26 @@ type ImageResult = {
 type SimilarResponse = {
   source: { id: number; filename: string }[];
   results: ImageResult[];
+  hasMore: boolean;
 };
 
 type SearchResponse = {
   query: string;
   results: ImageResult[];
+  hasMore: boolean;
+};
+
+type RandomResponse = {
+  results: ImageResult[];
+  hasMore: boolean;
 };
 
 type PathImage = {
   id: number;
   filename: string;
 };
+
+const LIMIT = 40;
 
 const transformImageUrl = (url: string) => {
   const parsedUrl = new URL(url);
@@ -39,6 +48,8 @@ export default function App() {
   const [images, setImages] = useState<ImageResult[]>([]);
   const [pathImages, setPathImages] = useState<PathImage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useQueryStates({
     seed: parseAsInteger.withDefault(42),
@@ -48,6 +59,7 @@ export default function App() {
   const [searchInput, setSearchInput] = useState("");
 
   const { seed, id, text } = query;
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const idList = id
     ? id
@@ -60,56 +72,108 @@ export default function App() {
     setSearchInput(text || "");
   }, [text]);
 
+  // Reset and load initial images when query params change
   useEffect(() => {
-    loadImages();
+    loadImages(0, true);
   }, [id, seed, text]);
 
-  const loadImages = async () => {
-    setLoading(true);
-    setError(null);
-    setImages([]);
-
-    try {
-      const LIMIT = 200;
-      let url: string;
-
-      if (text) {
-        // Text search mode
-        url = `/api/search?text=${encodeURIComponent(text)}&limit=${LIMIT}`;
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error("Failed to load images");
-        }
-        const data: SearchResponse = await response.json();
-        setImages(data.results);
-        setPathImages([]);
-      } else if (idList.length > 0) {
-        // Similar images mode
-        url = `/api/similar?id=${idList.join(",")}&limit=${LIMIT}`;
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error("Failed to load images");
-        }
-        const data: SimilarResponse = await response.json();
-        setImages(data.results);
-        setPathImages(Array.isArray(data.source) ? data.source : [data.source]);
+  const loadImages = useCallback(
+    async (offset: number, reset: boolean) => {
+      if (reset) {
+        setLoading(true);
+        setError(null);
+        setImages([]);
+        setHasMore(false);
       } else {
-        // Random seed mode
-        url = `/api/random?seed=${seed}&limit=${LIMIT}`;
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error("Failed to load images");
-        }
-        const data: ImageResult[] = await response.json();
-        setImages(data);
-        setPathImages([]);
+        setLoadingMore(true);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
+
+      try {
+        let url: string;
+
+        if (text) {
+          // Text search mode
+          url = `/api/search?text=${encodeURIComponent(text)}&limit=${LIMIT}&offset=${offset}`;
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error("Failed to load images");
+          }
+          const data: SearchResponse = await response.json();
+          setImages((prev) =>
+            reset ? data.results : [...prev, ...data.results]
+          );
+          setHasMore(data.hasMore);
+          if (reset) {
+            setPathImages([]);
+          }
+        } else if (idList.length > 0) {
+          // Similar images mode
+          url = `/api/similar?id=${idList.join(",")}&limit=${LIMIT}&offset=${offset}`;
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error("Failed to load images");
+          }
+          const data: SimilarResponse = await response.json();
+          setImages((prev) =>
+            reset ? data.results : [...prev, ...data.results]
+          );
+          setHasMore(data.hasMore);
+          if (reset) {
+            setPathImages(
+              Array.isArray(data.source) ? data.source : [data.source]
+            );
+          }
+        } else {
+          // Random seed mode
+          url = `/api/random?seed=${seed}&limit=${LIMIT}&offset=${offset}`;
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error("Failed to load images");
+          }
+          const data: RandomResponse = await response.json();
+          setImages((prev) =>
+            reset ? data.results : [...prev, ...data.results]
+          );
+          setHasMore(data.hasMore);
+          if (reset) {
+            setPathImages([]);
+          }
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [text, idList.join(","), seed]
+  );
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) {
+      return;
     }
-  };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && hasMore && !loading && !loadingMore) {
+          loadImages(images.length, false);
+        }
+      },
+      {
+        rootMargin: "200px",
+      }
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMore, loading, loadingMore, images.length, loadImages]);
 
   const handleNewSeed = () => {
     const newSeed = Math.floor(Math.random() * 1_000_000);
@@ -276,6 +340,21 @@ export default function App() {
                 ))}
               </Masonry>
             </ResponsiveMasonry>
+
+            {/* Sentinel element for infinite scroll */}
+            <div className="h-4" ref={sentinelRef} />
+
+            {loadingMore && (
+              <div className="py-8 text-center text-zinc-500">
+                Loading more...
+              </div>
+            )}
+
+            {!hasMore && images.length > 0 && (
+              <div className="py-8 text-center text-sm text-zinc-600">
+                No more images
+              </div>
+            )}
           </>
         )}
       </div>
