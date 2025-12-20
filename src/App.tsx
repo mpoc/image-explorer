@@ -163,6 +163,8 @@ export default function App() {
     setQuery({ id: null, seed: 42, text: null }, { history: "push" });
   };
 
+  const currentImage = pathImages.length > 0 ? pathImages.at(-1) : null;
+
   return (
     <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
       <div className="mx-auto max-w-full">
@@ -229,7 +231,7 @@ export default function App() {
           )}
         </div>
 
-        {pathImages.length > 0 && (
+        {pathImages.length > 1 && (
           <PathVisualization
             idList={idList}
             images={pathImages}
@@ -237,6 +239,8 @@ export default function App() {
             onTruncate={handlePathTruncate}
           />
         )}
+
+        {currentImage && <SelectedImage image={currentImage} />}
 
         {loading && (
           <div className="py-24 text-center text-zinc-500">
@@ -289,30 +293,29 @@ const PathVisualization = ({
   onTruncate: (index: number) => void;
   onRemove: (index: number) => void;
 }) => (
-  <div className="mb-6 border-2 border-zinc-700 bg-zinc-900 p-4">
+  <div className="mb-6 border border-zinc-800 bg-zinc-900 p-4">
     <div className="mb-3 flex items-center justify-between">
       <h3 className="font-medium text-sm text-zinc-400 uppercase tracking-wide">
-        Exploration Path ({images.length} steps)
+        History ({images.length})
       </h3>
-      <p className="text-xs text-zinc-500">
-        Click image to truncate path • × to remove from path
-      </p>
+      <p className="text-xs text-zinc-500">Click to truncate • × to remove</p>
     </div>
     <div className="flex items-center gap-2 overflow-x-auto pb-2">
       {idList.map((imageId, index) => {
         const image = images.find((img) => img.id === imageId);
+        const isLast = index === idList.length - 1;
         return (
           <div className="flex items-center gap-2" key={`${imageId}-${index}`}>
             <div className="group relative flex-shrink-0">
               <div
                 className={`relative border-2 ${
-                  index === images.length - 1
-                    ? "border-blue-500"
-                    : "border-zinc-600"
+                  isLast ? "border-blue-500" : "border-zinc-700"
                 } cursor-pointer bg-zinc-950 transition-all hover:border-zinc-400`}
                 onClick={() => onTruncate(index)}
               >
-                <div className="-top-2 -left-2 absolute z-10 flex h-5 w-5 items-center justify-center bg-zinc-700 font-medium text-xs">
+                <div
+                  className={`-top-2 -left-2 absolute z-10 flex h-5 w-5 items-center justify-center font-medium text-xs ${isLast ? "bg-blue-500" : "bg-zinc-700"}`}
+                >
                   {index + 1}
                 </div>
                 <button
@@ -327,17 +330,14 @@ const PathVisualization = ({
                 </button>
                 {image ? (
                   <img
-                    className="h-20 w-20 object-cover"
+                    className="h-16 w-16 object-cover"
                     src={`/api/proxy?url=${encodeURIComponent(image.filename.replace(/image$/, "thumbnail"))}`}
                   />
                 ) : (
-                  <div className="flex h-20 w-20 items-center justify-center text-xs text-zinc-500">
-                    ID: {imageId}
+                  <div className="flex h-16 w-16 items-center justify-center text-xs text-zinc-500">
+                    {imageId}
                   </div>
                 )}
-              </div>
-              <div className="mt-1 text-center text-xs text-zinc-500">
-                {imageId}
               </div>
             </div>
             {index < idList.length - 1 && (
@@ -346,6 +346,33 @@ const PathVisualization = ({
           </div>
         );
       })}
+    </div>
+  </div>
+);
+
+const SelectedImage = ({ image }: { image: PathImage }) => (
+  <div className="mb-6 border-2 border-blue-500 bg-zinc-900 p-4">
+    <h3 className="mb-3 font-medium text-sm text-zinc-400 uppercase tracking-wide">
+      Current
+    </h3>
+    <div className="mx-auto w-fit border border-zinc-800 bg-zinc-950">
+      <img
+        className="block h-auto max-h-[700px] w-full object-contain"
+        src={`/api/proxy?url=${encodeURIComponent(image.filename)}`}
+      />
+      <div className="border-zinc-800 border-t p-3">
+        <div className="text-sm text-zinc-400">
+          ID:{" "}
+          <a
+            className="text-zinc-300 underline decoration-zinc-700 underline-offset-2 transition-colors hover:text-zinc-100 hover:decoration-zinc-500"
+            href={transformImageUrl(image.filename)}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            {image.id}
+          </a>
+        </div>
+      </div>
     </div>
   </div>
 );
