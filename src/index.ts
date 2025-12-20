@@ -6,6 +6,7 @@ import dashboard from "./dashboard.html";
 import { db, embeddings } from "./db";
 import { computeTextEmbedding } from "./embeddings";
 import { generateEmbeddingFromSeed } from "./generateEmbeddingFromSeed";
+import { DEFAULT_EXTRAPOLATOR, getExtrapolator } from "./path-extrapolator";
 
 const number = (input: unknown): number => z.coerce.number().parse(input);
 
@@ -110,8 +111,9 @@ const server = serve({
             );
           }
 
-          // TODO: Implement path extrapolation here
-          const targetEmbedding = orderedPath.at(-1)!.embedding;
+          const pathEmbeddings = orderedPath.map((p) => p.embedding);
+          const extrapolator = getExtrapolator(DEFAULT_EXTRAPOLATOR);
+          const targetEmbedding = extrapolator.extrapolate(pathEmbeddings);
 
           const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(targetEmbedding)}))`;
 
@@ -145,6 +147,7 @@ const server = serve({
               id: p.id,
               filename: p.filename,
             })),
+            mode: extrapolator.name,
             results,
           });
         } catch (error) {
