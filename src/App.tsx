@@ -10,7 +10,7 @@ type ImageResult = {
 };
 
 type SimilarResponse = {
-  source: { id: number; filename: string };
+  source: { id: number; filename: string }[];
   results: ImageResult[];
 };
 
@@ -19,7 +19,7 @@ type SearchResponse = {
   results: ImageResult[];
 };
 
-type SelectedImageProps = {
+type PathImage = {
   id: number;
   filename: string;
 };
@@ -36,19 +36,24 @@ const transformImageUrl = (url: string) => {
 
 export default function App() {
   const [images, setImages] = useState<ImageResult[]>([]);
-  const [selectedImage, setSelectedImage] = useState<SelectedImageProps | null>(
-    null
-  );
+  const [pathImages, setPathImages] = useState<PathImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useQueryStates({
     seed: parseAsInteger.withDefault(42),
-    id: parseAsInteger,
+    id: parseAsString,
     text: parseAsString,
   });
   const [searchInput, setSearchInput] = useState("");
 
   const { seed, id, text } = query;
+
+  const idList = id
+    ? id
+        .split(",")
+        .map((s) => Number.parseInt(s.trim(), 10))
+        .filter((n) => !Number.isNaN(n))
+    : [];
 
   useEffect(() => {
     setSearchInput(text || "");
@@ -62,7 +67,6 @@ export default function App() {
     setLoading(true);
     setError(null);
     setImages([]);
-    setSelectedImage(null);
 
     try {
       const LIMIT = 200;
@@ -77,17 +81,17 @@ export default function App() {
         }
         const data: SearchResponse = await response.json();
         setImages(data.results);
-        setSelectedImage(null);
-      } else if (id) {
+        setPathImages([]);
+      } else if (idList.length > 0) {
         // Similar images mode
-        url = `/api/similar?id=${id}&limit=${LIMIT}`;
+        url = `/api/similar?id=${idList.join(",")}&limit=${LIMIT}`;
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error("Failed to load images");
         }
         const data: SimilarResponse = await response.json();
         setImages(data.results);
-        setSelectedImage(data.source);
+        setPathImages(Array.isArray(data.source) ? data.source : [data.source]);
       } else {
         // Random seed mode
         url = `/api/random?seed=${seed}&limit=${LIMIT}`;
@@ -97,7 +101,7 @@ export default function App() {
         }
         const data: ImageResult[] = await response.json();
         setImages(data);
-        setSelectedImage(null);
+        setPathImages([]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -124,6 +128,41 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
+  const handleImageClick = (imageId: number, e: React.MouseEvent) => {
+    e.preventDefault();
+
+    const newPath = [...idList, imageId];
+    setQuery(
+      { id: newPath.join(","), seed: null, text: null },
+      { history: "push" }
+    );
+    window.scrollTo(0, 0);
+  };
+
+  const handlePathTruncate = (index: number) => {
+    const newPath = idList.slice(0, index + 1);
+    setQuery(
+      { id: newPath.join(","), seed: null, text: null },
+      { history: "push" }
+    );
+  };
+
+  const handlePathRemove = (index: number) => {
+    const newPath = idList.filter((_, i) => i !== index);
+    if (newPath.length === 0) {
+      setQuery({ id: null, seed: 42, text: null }, { history: "push" });
+    } else {
+      setQuery(
+        { id: newPath.join(","), seed: null, text: null },
+        { history: "push" }
+      );
+    }
+  };
+
+  const handleClearPath = () => {
+    setQuery({ id: null, seed: 42, text: null }, { history: "push" });
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
       <div className="mx-auto max-w-full">
@@ -133,6 +172,15 @@ export default function App() {
               Image Explorer
             </h1>
             <div className="flex gap-2">
+              {idList.length > 0 && (
+                <button
+                  className="cursor-pointer border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm transition-colors hover:bg-zinc-700"
+                  onClick={handleClearPath}
+                  type="button"
+                >
+                  Clear Path
+                </button>
+              )}
               <button
                 className="cursor-pointer border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm transition-colors hover:bg-zinc-700"
                 onClick={handleNewSeed}
@@ -165,18 +213,30 @@ export default function App() {
           <h2 className="font-medium text-lg">
             {text !== null
               ? `Search: "${text}"`
-              : id !== null
-                ? `Similar to ID: ${id}`
+              : idList.length > 0
+                ? `Path: ${idList.length} image${idList.length > 1 ? "s" : ""}`
                 : `Seed: ${seed}`}
           </h2>
-          {id === null && text === null && (
+          {idList.length === 0 && text === null && (
             <p className="mt-1 font-mono text-xs text-zinc-500">
               {window.location.origin}?seed={seed}
             </p>
           )}
+          {idList.length > 0 && (
+            <p className="mt-1 font-mono text-xs text-zinc-500">
+              {window.location.origin}?id={idList.join(",")}
+            </p>
+          )}
         </div>
 
-        {selectedImage && <SelectedImage image={selectedImage} />}
+        {pathImages.length > 0 && (
+          <PathVisualization
+            idList={idList}
+            images={pathImages}
+            onRemove={handlePathRemove}
+            onTruncate={handlePathTruncate}
+          />
+        )}
 
         {loading && (
           <div className="py-24 text-center text-zinc-500">
@@ -202,7 +262,12 @@ export default function App() {
             >
               <Masonry gutter="6px">
                 {images.map((image) => (
-                  <Image image={image} key={image.id} />
+                  <Image
+                    image={image}
+                    isInPath={idList.includes(image.id)}
+                    key={image.id}
+                    onImageClick={handleImageClick}
+                  />
                 ))}
               </Masonry>
             </ResponsiveMasonry>
@@ -213,16 +278,105 @@ export default function App() {
   );
 }
 
-const Image = ({ image }: { image: ImageResult }) => (
+const PathVisualization = ({
+  images,
+  idList,
+  onTruncate,
+  onRemove,
+}: {
+  images: PathImage[];
+  idList: number[];
+  onTruncate: (index: number) => void;
+  onRemove: (index: number) => void;
+}) => (
+  <div className="mb-6 border-2 border-zinc-700 bg-zinc-900 p-4">
+    <div className="mb-3 flex items-center justify-between">
+      <h3 className="font-medium text-sm text-zinc-400 uppercase tracking-wide">
+        Exploration Path ({images.length} steps)
+      </h3>
+      <p className="text-xs text-zinc-500">
+        Click image to truncate path • × to remove from path
+      </p>
+    </div>
+    <div className="flex items-center gap-2 overflow-x-auto pb-2">
+      {idList.map((imageId, index) => {
+        const image = images.find((img) => img.id === imageId);
+        return (
+          <div className="flex items-center gap-2" key={`${imageId}-${index}`}>
+            <div className="group relative flex-shrink-0">
+              <div
+                className={`relative border-2 ${
+                  index === images.length - 1
+                    ? "border-blue-500"
+                    : "border-zinc-600"
+                } cursor-pointer bg-zinc-950 transition-all hover:border-zinc-400`}
+                onClick={() => onTruncate(index)}
+              >
+                <div className="-top-2 -left-2 absolute z-10 flex h-5 w-5 items-center justify-center bg-zinc-700 font-medium text-xs">
+                  {index + 1}
+                </div>
+                <button
+                  className="-top-2 -right-2 absolute z-10 flex h-5 w-5 items-center justify-center bg-red-900 font-medium text-xs opacity-0 transition-opacity hover:bg-red-700 group-hover:opacity-100"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(index);
+                  }}
+                  type="button"
+                >
+                  ×
+                </button>
+                {image ? (
+                  <img
+                    className="h-20 w-20 object-cover"
+                    src={`/api/proxy?url=${encodeURIComponent(image.filename.replace(/image$/, "thumbnail"))}`}
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center text-xs text-zinc-500">
+                    ID: {imageId}
+                  </div>
+                )}
+              </div>
+              <div className="mt-1 text-center text-xs text-zinc-500">
+                {imageId}
+              </div>
+            </div>
+            {index < idList.length - 1 && (
+              <div className="flex-shrink-0 text-zinc-600">→</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
+const Image = ({
+  image,
+  onImageClick,
+  isInPath,
+}: {
+  image: ImageResult;
+  onImageClick: (id: number, e: React.MouseEvent) => void;
+  isInPath: boolean;
+}) => (
   <div
-    className="relative block border border-zinc-800 bg-zinc-900 transition-all hover:border-zinc-600"
+    className={`relative block border ${
+      isInPath
+        ? "border-blue-500 bg-blue-950/20"
+        : "border-zinc-800 bg-zinc-900"
+    } transition-all hover:border-zinc-600`}
     key={image.id}
   >
     <a
       className="absolute inset-0 z-0"
       href={`?id=${image.id}`}
-      onClick={() => window.scrollTo(0, 0)}
+      onClick={(e) => onImageClick(image.id, e)}
     />
+    {isInPath && (
+      <div className="absolute top-2 right-2 z-10 bg-blue-500 px-2 py-0.5 font-medium text-xs">
+        In Path
+      </div>
+    )}
     <img
       className="block h-auto w-full"
       loading="lazy"
@@ -242,33 +396,6 @@ const Image = ({ image }: { image: ImageResult }) => (
       </div>
       <div className="text-xs text-zinc-400">
         {(1 - image.distance).toFixed(4)}
-      </div>
-    </div>
-  </div>
-);
-
-const SelectedImage = ({ image }: { image: SelectedImageProps }) => (
-  <div className="mb-6 border-2 border-zinc-700 bg-zinc-900 p-4">
-    <h3 className="mb-3 font-medium text-sm text-zinc-400 uppercase tracking-wide">
-      Selected
-    </h3>
-    <div className="mx-auto w-fit border border-zinc-800 bg-zinc-950">
-      <img
-        className="block h-auto max-h-[700px] w-full object-contain"
-        src={`/api/proxy?url=${encodeURIComponent(image.filename)}`}
-      />
-      <div className="border-zinc-800 border-t p-3">
-        <div className="text-sm text-zinc-400">
-          ID:{" "}
-          <a
-            className="text-zinc-300 underline decoration-zinc-700 underline-offset-2 transition-colors hover:text-zinc-100 hover:decoration-zinc-500"
-            href={transformImageUrl(image.filename)}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            {image.id}
-          </a>
-        </div>
       </div>
     </div>
   </div>

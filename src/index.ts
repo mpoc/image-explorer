@@ -1,5 +1,5 @@
 import Bun, { serve } from "bun";
-import { and, asc, eq, lte, not, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, lte, not, sql } from "drizzle-orm";
 import { z } from "zod";
 import { MODEL_NAME } from "./config";
 import dashboard from "./dashboard.html";
@@ -8,6 +8,16 @@ import { computeTextEmbedding } from "./embeddings";
 import { generateEmbeddingFromSeed } from "./generateEmbeddingFromSeed";
 
 const number = (input: unknown): number => z.coerce.number().parse(input);
+
+const parseIdList = (idParam: string | null): number[] => {
+  if (!idParam) {
+    return [];
+  }
+  return idParam
+    .split(",")
+    .map((s) => Number.parseInt(s.trim(), 10))
+    .filter((n) => !Number.isNaN(n));
+};
 
 const server = serve({
   port: 3000,
@@ -60,10 +70,10 @@ const server = serve({
     "/api/similar": {
       async GET(req) {
         const url = new URL(req.url);
-        const id = number(url.searchParams.get("id"));
+        const idList = parseIdList(url.searchParams.get("id"));
         const limit = number(url.searchParams.get("limit") || "40");
 
-        if (!id) {
+        if (idList.length === 0) {
           return Response.json(
             { error: "Missing id parameter" },
             { status: 400 }
@@ -71,28 +81,41 @@ const server = serve({
         }
 
         try {
-          // First, get the embedding for the source image
-          const sourceResult = await db
+          // Fetch all embeddings for the path
+          const pathResults = await db
             .select({
+              id: embeddings.id,
               embedding: embeddings.embedding,
               filename: embeddings.filename,
             })
             .from(embeddings)
-            .where(and(eq(embeddings.id, id), eq(embeddings.model, MODEL_NAME)))
-            .limit(1)
+            .where(
+              and(
+                inArray(embeddings.id, idList),
+                eq(embeddings.model, MODEL_NAME)
+              )
+            )
             .all();
 
-          const [source] = sourceResult;
-          if (!source) {
-            return Response.json({ error: "Image not found" }, { status: 404 });
+          const embeddingMap = new Map(pathResults.map((r) => [r.id, r]));
+
+          const orderedPath = idList
+            .map((id) => embeddingMap.get(id))
+            .filter((r) => r !== undefined);
+
+          if (orderedPath.length === 0) {
+            return Response.json(
+              { error: "No images found for provided IDs" },
+              { status: 404 }
+            );
           }
 
-          const sourceEmbedding = source.embedding;
-          const sourceFilename = source.filename;
+          // TODO: Implement path extrapolation here
+          const targetEmbedding = orderedPath.at(-1)!.embedding;
 
-          const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(sourceEmbedding)}))`;
+          const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(targetEmbedding)}))`;
 
-          // Find similar images
+          // Find similar images, excluding all images in the path
           const startedAt = performance.now();
           const results = await db
             .select({
@@ -103,7 +126,7 @@ const server = serve({
             .from(embeddings)
             .where(
               and(
-                not(eq(embeddings.id, id)), // Exclude the source image itself
+                not(inArray(embeddings.id, idList)), // Exclude all path images, TODO: Rethink this approach, maybe only exclude last image?
                 eq(embeddings.model, MODEL_NAME),
                 lte(distanceExpression, 0.2)
               )
@@ -114,11 +137,14 @@ const server = serve({
           const endedAt = performance.now();
 
           console.log(
-            `Found ${results.length} similar images for ID ${id}, took ${(endedAt - startedAt).toFixed(2)} ms`
+            `Found ${results.length} similar images for path [${idList.join(",")}], took ${(endedAt - startedAt).toFixed(2)} ms`
           );
 
           return Response.json({
-            source: { id, filename: sourceFilename },
+            source: orderedPath.map((p) => ({
+              id: p.id,
+              filename: p.filename,
+            })),
             results,
           });
         } catch (error) {
