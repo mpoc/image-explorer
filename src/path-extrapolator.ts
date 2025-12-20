@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { add, normalize, subtract, type Vector, zero } from "./vector";
 
 /**
@@ -21,7 +22,9 @@ export class LastPathExtrapolator implements PathExtrapolator {
     if (path.length === 0) {
       throw new Error("Path cannot be empty");
     }
-    return path.at(-1);
+    const last = path.at(-1);
+    assert(last);
+    return last;
   }
 }
 
@@ -59,6 +62,7 @@ export class MomentumPathExtrapolator implements PathExtrapolator {
 
     const velocityEma = this.computeVelocityEma(path);
     const lastPosition = path.at(-1);
+    assert(lastPosition);
     const extrapolated = add(lastPosition, velocityEma);
 
     // Renormalize to stay on the unit hypersphere
