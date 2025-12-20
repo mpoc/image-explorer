@@ -21,14 +21,16 @@
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",
+    "bun-plugin-tailwind": "^0.1.2",
+    "clsx": "^2.1.1",
     "drizzle-orm": "^0.44.7",
     "nuqs": "^2.7.3",
     "p-all": "^5.0.1",
-    "bun-plugin-tailwind": "^0.1.2",
     "react": "^19",
     "react-dom": "^19",
-    "tailwindcss": "^4.1.11",
     "react-responsive-masonry": "^2.7.1",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^4.1.11",
     "zod": "^4.1.12"
   }
 }
