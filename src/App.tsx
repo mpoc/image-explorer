@@ -1,6 +1,7 @@
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useState } from "react";
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
+import { cn } from "./utils";
 import "./index.css";
 
 type ImageResult = {
@@ -306,20 +307,24 @@ const PathVisualization = ({
         const isLast = index === idList.length - 1;
         return (
           <div className="flex items-center gap-2" key={`${imageId}-${index}`}>
-            <div className="group relative flex-shrink-0">
+            <div className="group relative shrink-0">
               <div
-                className={`relative border-2 ${
+                className={cn(
+                  "relative cursor-pointer border-2 bg-zinc-950 transition-all hover:border-zinc-400",
                   isLast ? "border-blue-500" : "border-zinc-700"
-                } cursor-pointer bg-zinc-950 transition-all hover:border-zinc-400`}
+                )}
                 onClick={() => onTruncate(index)}
               >
                 <div
-                  className={`-top-2 -left-2 absolute z-10 flex h-5 w-5 items-center justify-center font-medium text-xs ${isLast ? "bg-blue-500" : "bg-zinc-700"}`}
+                  className={cn(
+                    "-top-2 -left-2 absolute z-10 flex size-5 items-center justify-center font-medium text-xs",
+                    isLast ? "bg-blue-500" : "bg-zinc-700"
+                  )}
                 >
                   {index + 1}
                 </div>
                 <button
-                  className="-top-2 -right-2 absolute z-10 flex h-5 w-5 items-center justify-center bg-red-900 font-medium text-xs opacity-0 transition-opacity hover:bg-red-700 group-hover:opacity-100"
+                  className="-top-2 -right-2 absolute z-10 flex size-5 items-center justify-center bg-red-900 font-medium text-xs opacity-0 transition-opacity hover:bg-red-700 group-hover:opacity-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     onRemove(index);
@@ -330,11 +335,11 @@ const PathVisualization = ({
                 </button>
                 {image ? (
                   <img
-                    className="h-16 w-16 object-cover"
+                    className="size-16 object-cover"
                     src={`/api/proxy?url=${encodeURIComponent(image.filename.replace(/image$/, "thumbnail"))}`}
                   />
                 ) : (
-                  <div className="flex h-16 w-16 items-center justify-center text-xs text-zinc-500">
+                  <div className="flex size-16 items-center justify-center text-xs text-zinc-500">
                     {imageId}
                   </div>
                 )}
@@ -387,11 +392,12 @@ const Image = ({
   isInPath: boolean;
 }) => (
   <div
-    className={`relative block border ${
+    className={cn(
+      "relative block border transition-all hover:border-zinc-600",
       isInPath
         ? "border-blue-500 bg-blue-950/20"
         : "border-zinc-800 bg-zinc-900"
-    } transition-all hover:border-zinc-600`}
+    )}
     key={image.id}
   >
     <a
