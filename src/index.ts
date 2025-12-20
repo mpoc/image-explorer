@@ -251,6 +251,9 @@ const server = serve({
           }
 
           const contentType = response.headers.get("content-type");
+          const expires = response.headers.get("expires");
+          const lastModified = response.headers.get("last-modified");
+          const etag = response.headers.get("etag");
 
           console.log(
             new Date().toISOString(),
@@ -262,6 +265,9 @@ const server = serve({
               ...(contentType ? { "Content-Type": contentType } : {}),
               "Access-Control-Allow-Origin": "*",
               "Cache-Control": "public, max-age=31536000",
+              ...(expires ? { Expires: expires } : {}),
+              ...(lastModified ? { "Last-Modified": lastModified } : {}),
+              ...(etag ? { ETag: etag } : {}),
             },
           });
         } catch (error) {
