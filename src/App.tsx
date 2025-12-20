@@ -306,7 +306,10 @@ const PathVisualization = ({
         const image = images.find((img) => img.id === imageId);
         const isLast = index === idList.length - 1;
         return (
-          <div className="flex items-center gap-2" key={`${imageId}-${index}`}>
+          <div
+            className="flex shrink-0 items-center gap-2"
+            key={`${imageId}-${index}`}
+          >
             <div className="group relative shrink-0">
               <div
                 className={cn(
