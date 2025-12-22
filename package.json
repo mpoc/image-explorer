@@ -13,7 +13,7 @@
     "@types/bun": "latest",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/react-responsive-masonry": "^2.6.0",
+    "@types/react-responsive-masonry": "^2.7.0",
     "ultracite": "6.3.2"
   },
   "peerDependencies": {
