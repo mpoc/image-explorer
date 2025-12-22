@@ -58,6 +58,7 @@ export default function App() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const [query, setQuery] = useQueryStates({
     seed: parseAsInteger.withDefault(42),
     id: parseAsString,
@@ -78,6 +79,15 @@ export default function App() {
   useEffect(() => {
     setSearchInput(text || "");
   }, [text]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 400);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Reset and load initial images when query params change
   useEffect(() => {
@@ -237,6 +247,10 @@ export default function App() {
   };
   const handleClearPath = () => updatePath(null);
 
+  const handleBackToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const currentImage = pathImages.length > 0 ? pathImages.at(-1) : null;
 
   return (
@@ -370,6 +384,21 @@ export default function App() {
           </>
         )}
       </div>
+
+      {/* Back to Top Button */}
+      <button
+        aria-label="Back to top"
+        className={cn(
+          "fixed right-6 bottom-6 z-50 flex size-12 cursor-pointer items-center justify-center border border-zinc-700 bg-zinc-800 text-sm transition-all hover:bg-zinc-700",
+          showBackToTop
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-4 opacity-0"
+        )}
+        onClick={handleBackToTop}
+        type="button"
+      >
+        ↑
+      </button>
     </div>
   );
 }
