@@ -171,7 +171,7 @@ export default function App() {
         }
       },
       {
-        rootMargin: "200px",
+        rootMargin: "2000px",
       }
     );
 
