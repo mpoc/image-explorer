@@ -365,7 +365,7 @@ export default function App() {
               </div>
             )}
             <ResponsiveMasonry
-              columnsCountBreakPoints={{ 350: 1, 768: 3, 1200: 4, 1600: 5 }}
+              columnsCountBreakPoints={{ 350: 2, 768: 3, 1200: 4, 1600: 5 }}
               gutterBreakPoints={{ 0: "4px" }}
             >
               <Masonry>
