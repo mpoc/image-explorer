@@ -408,14 +408,14 @@ const PathVisualization = ({
               >
                 <div
                   className={cn(
-                    "-top-2 -left-2 absolute z-10 flex size-5 items-center justify-center font-medium text-xs",
+                    "absolute top-0 left-0 z-10 flex size-5 items-center justify-center font-medium text-xs",
                     isLast ? "bg-blue-500" : "bg-zinc-700"
                   )}
                 >
                   {index + 1}
                 </div>
                 <button
-                  className="-top-2 -right-2 absolute z-10 flex size-5 items-center justify-center bg-red-900 font-medium text-xs opacity-0 transition-opacity hover:bg-red-700 group-hover:opacity-100"
+                  className="absolute top-0 right-0 z-10 flex size-5 items-center justify-center bg-red-900 font-medium text-xs opacity-0 transition-opacity hover:bg-red-700 group-hover:opacity-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     onRemove(index);
