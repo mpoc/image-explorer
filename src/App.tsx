@@ -475,7 +475,7 @@ const Image = ({
 }) => (
   <div
     className={cn(
-      "relative block border transition-all hover:border-zinc-600",
+      "relative block w-full border transition-all hover:border-zinc-600",
       isInPath
         ? "border-blue-500 bg-blue-950/20"
         : "border-zinc-800 bg-zinc-900"
@@ -493,7 +493,7 @@ const Image = ({
       </div>
     )}
     <img
-      className="block h-auto w-full"
+      className="block h-auto w-full min-w-full"
       loading="lazy"
       src={`/api/proxy?url=${encodeURIComponent(image.filename.replace(/image$/, "thumbnail"))}`}
     />
