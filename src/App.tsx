@@ -34,15 +34,19 @@ type PathImage = {
 
 const LIMIT = 40;
 
-const transformImageUrl = (url: string) => {
-  const parsedUrl = new URL(url);
+const getImagePageUrl = (imageUrl: string) => {
+  const parsedUrl = new URL(imageUrl);
   const parts = parsedUrl.pathname.split("/");
   if (parts.length >= 4 && parts[1] === "image") {
     parsedUrl.pathname = `/images/${parts[2]}`;
     return parsedUrl.toString();
   }
-  return url;
+  return imageUrl;
 };
+
+const imageUrlRegex = /image$/;
+const getThumbnailUrl = (imageUrl: string) =>
+  imageUrl.replace(imageUrlRegex, "thumbnail");
 
 export default function App() {
   const [images, setImages] = useState<ImageResult[]>([]);
@@ -418,7 +422,7 @@ const PathVisualization = ({
                 {image ? (
                   <img
                     className="size-16 object-cover"
-                    src={`/api/proxy?url=${encodeURIComponent(image.filename.replace(/image$/, "thumbnail"))}`}
+                    src={`/api/proxy?url=${encodeURIComponent(getThumbnailUrl(image.filename))}`}
                   />
                 ) : (
                   <div className="flex size-16 items-center justify-center text-xs text-zinc-500">
@@ -452,7 +456,7 @@ const SelectedImage = ({ image }: { image: PathImage }) => (
           ID:{" "}
           <a
             className="text-zinc-300 underline decoration-zinc-700 underline-offset-2 transition-colors hover:text-zinc-100 hover:decoration-zinc-500"
-            href={transformImageUrl(image.filename)}
+            href={getImagePageUrl(image.filename)}
             rel="noopener noreferrer"
             target="_blank"
           >
@@ -495,14 +499,14 @@ const Image = ({
     <img
       className="block h-auto w-full min-w-full"
       loading="lazy"
-      src={`/api/proxy?url=${encodeURIComponent(image.filename.replace(/image$/, "thumbnail"))}`}
+      src={`/api/proxy?url=${encodeURIComponent(getThumbnailUrl(image.filename))}`}
     />
     <div className="flex items-center justify-between border-zinc-800 border-t p-2">
       <div className="text-xs text-zinc-500">
         ID:{" "}
         <a
           className="relative z-10 text-zinc-400 underline decoration-zinc-800 underline-offset-2 transition-colors hover:text-zinc-200 hover:decoration-zinc-600"
-          href={transformImageUrl(image.filename)}
+          href={getImagePageUrl(image.filename)}
           rel="noopener noreferrer"
           target="_blank"
         >
