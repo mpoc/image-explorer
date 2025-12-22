@@ -197,16 +197,16 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
-  const handleImageClick = (imageId: number, e: React.MouseEvent) => {
+  const handleImageClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (!shouldNavigateInPlace(e)) {
       return;
     }
 
     e.preventDefault();
 
-    const newPath = [...idList, imageId];
+    const url = new URL(e.currentTarget.href);
     setQuery(
-      { id: newPath.join(","), seed: null, text: null },
+      { id: url.searchParams.get("id"), seed: null, text: null },
       { history: "push" }
     );
     window.scrollTo(0, 0);
@@ -340,6 +340,7 @@ export default function App() {
               <Masonry gutter="6px">
                 {images.map((image) => (
                   <Image
+                    idList={idList}
                     image={image}
                     isInPath={idList.includes(image.id)}
                     key={image.id}
@@ -474,11 +475,13 @@ const SelectedImage = ({ image }: { image: PathImage }) => (
 
 const Image = ({
   image,
+  idList,
   onImageClick,
   isInPath,
 }: {
   image: ImageResult;
-  onImageClick: (id: number, e: React.MouseEvent) => void;
+  idList: number[];
+  onImageClick: (e: React.MouseEvent<HTMLAnchorElement>) => void;
   isInPath: boolean;
 }) => (
   <div
@@ -492,8 +495,8 @@ const Image = ({
   >
     <a
       className="absolute inset-0 z-0"
-      href={`?id=${image.id}`}
-      onClick={(e) => onImageClick(image.id, e)}
+      href={`?id=${[...idList, image.id].join(",")}`}
+      onClick={(e) => onImageClick(e)}
     />
     {isInPath && (
       <div className="absolute top-2 right-2 z-10 bg-blue-500 px-2 py-0.5 font-medium text-xs">
