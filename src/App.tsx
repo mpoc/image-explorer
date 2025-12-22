@@ -265,7 +265,7 @@ export default function App() {
     pathImages.find((img) => img.id === selectedImageId) ?? null;
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
+    <div className="min-h-screen bg-zinc-950 p-5 text-zinc-100">
       <div className="mx-auto max-w-full">
         <header className="mb-8 border-zinc-800 border-b pb-6">
           <div className="mb-4 flex items-center justify-between">
