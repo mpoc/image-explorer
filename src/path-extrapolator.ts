@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { add, normalize, subtract, type Vector, zero } from "./vector";
+import { add, mean, normalize, subtract, type Vector, zero } from "./vector";
 
 /**
  * Interface for path extrapolation strategies.
@@ -90,9 +90,26 @@ export class MomentumPathExtrapolator implements PathExtrapolator {
   }
 }
 
+/**
+ * Extrapolates by computing the centroid (mean) of all path embeddings.
+ * Useful for finding content similar to the overall exploration theme.
+ */
+export class CentroidPathExtrapolator implements PathExtrapolator {
+  readonly name = "centroid";
+
+  extrapolate(path: Vector[]): Vector {
+    if (path.length === 0) {
+      throw new Error("Path cannot be empty");
+    }
+
+    return normalize(mean(path));
+  }
+}
+
 export const extrapolators = {
   last: new LastPathExtrapolator(),
   momentum: new MomentumPathExtrapolator(0.6),
+  centroid: new CentroidPathExtrapolator(),
 } as const;
 
 export type ExtrapolatorName = keyof typeof extrapolators;
