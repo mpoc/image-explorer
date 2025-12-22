@@ -212,10 +212,25 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
-  const handlePathTruncate = (index: number) => {
+  const handlePathEndHere = (index: number) => {
     const newPath = idList.slice(0, index + 1);
     setQuery(
       { id: newPath.join(","), seed: null, text: null },
+      { history: "push" }
+    );
+  };
+
+  const handlePathStartHere = (index: number) => {
+    const newPath = idList.slice(index);
+    setQuery(
+      { id: newPath.join(","), seed: null, text: null },
+      { history: "push" }
+    );
+  };
+
+  const handlePathSolo = (index: number) => {
+    setQuery(
+      { id: String(idList[index]), seed: null, text: null },
       { history: "push" }
     );
   };
@@ -308,8 +323,10 @@ export default function App() {
           <PathVisualization
             idList={idList}
             images={pathImages}
+            onEndHere={handlePathEndHere}
             onRemove={handlePathRemove}
-            onTruncate={handlePathTruncate}
+            onSolo={handlePathSolo}
+            onStartHere={handlePathStartHere}
           />
         )}
 
@@ -374,12 +391,16 @@ export default function App() {
 const PathVisualization = ({
   images,
   idList,
-  onTruncate,
+  onEndHere,
+  onStartHere,
+  onSolo,
   onRemove,
 }: {
   images: PathImage[];
   idList: number[];
-  onTruncate: (index: number) => void;
+  onEndHere: (index: number) => void;
+  onStartHere: (index: number) => void;
+  onSolo: (index: number) => void;
   onRemove: (index: number) => void;
 }) => (
   <div className="mb-6 border border-zinc-800 bg-zinc-900 p-4">
@@ -387,12 +408,12 @@ const PathVisualization = ({
       <h3 className="font-medium text-sm text-zinc-400 uppercase tracking-wide">
         History ({images.length})
       </h3>
-      <p className="text-xs text-zinc-500">Click to truncate • × to remove</p>
     </div>
     <div className="flex items-center gap-2 overflow-x-auto pb-2">
       {idList.map((imageId, index) => {
         const image = images.find((img) => img.id === imageId);
         const isLast = index === idList.length - 1;
+        const isFirst = index === 0;
         return (
           <div
             className="flex shrink-0 items-center gap-2"
@@ -401,36 +422,66 @@ const PathVisualization = ({
             <div className="group relative shrink-0">
               <div
                 className={cn(
-                  "relative cursor-pointer border-2 bg-zinc-950 transition-all hover:border-zinc-400",
+                  "relative border-2 bg-zinc-950 transition-all",
                   isLast ? "border-blue-500" : "border-zinc-700"
                 )}
-                onClick={() => onTruncate(index)}
               >
+                {/* Top-left: Solo (just this image) */}
+                <button
+                  className="absolute top-0 left-0 z-10 flex size-8 items-center justify-center bg-green-600/80 text-sm opacity-0 transition-opacity hover:bg-green-500 group-hover:opacity-100"
+                  onClick={() => onSolo(index)}
+                  title="Just this image"
+                  type="button"
+                >
+                  ◎
+                </button>
+                {/* Top-right: Remove */}
+                <button
+                  className="absolute top-0 right-0 z-10 flex size-8 items-center justify-center bg-red-900/80 text-sm opacity-0 transition-opacity hover:bg-red-700 group-hover:opacity-100"
+                  onClick={() => onRemove(index)}
+                  title="Remove from path"
+                  type="button"
+                >
+                  ×
+                </button>
+                {/* Bottom-left: Truncate start (keep this and after) */}
+                {!isFirst && (
+                  <button
+                    className="absolute bottom-0 left-0 z-10 flex size-8 items-center justify-center bg-zinc-700/80 text-sm opacity-0 transition-opacity hover:bg-zinc-600 group-hover:opacity-100"
+                    onClick={() => onStartHere(index)}
+                    title="Keep this and after"
+                    type="button"
+                  >
+                    ⇤
+                  </button>
+                )}
+                {/* Bottom-right: Truncate end (keep this and before) */}
+                {!isLast && (
+                  <button
+                    className="absolute right-0 bottom-0 z-10 flex size-8 items-center justify-center bg-zinc-700/80 text-sm opacity-0 transition-opacity hover:bg-zinc-600 group-hover:opacity-100"
+                    onClick={() => onEndHere(index)}
+                    title="Keep this and before"
+                    type="button"
+                  >
+                    ⇥
+                  </button>
+                )}
+                {/* Index badge - shown when not hovering */}
                 <div
                   className={cn(
-                    "absolute top-0 left-0 z-10 flex size-5 items-center justify-center font-medium text-xs",
+                    "absolute bottom-0 left-0 z-0 flex size-8 items-center justify-center font-medium text-sm transition-opacity group-hover:opacity-0",
                     isLast ? "bg-blue-500" : "bg-zinc-700"
                   )}
                 >
                   {index + 1}
                 </div>
-                <button
-                  className="absolute top-0 right-0 z-10 flex size-5 items-center justify-center bg-red-900 font-medium text-xs opacity-0 transition-opacity hover:bg-red-700 group-hover:opacity-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemove(index);
-                  }}
-                  type="button"
-                >
-                  ×
-                </button>
                 {image ? (
                   <img
-                    className="size-16 object-cover"
+                    className="size-32 object-cover"
                     src={`/api/proxy?url=${encodeURIComponent(getThumbnailUrl(image.filename))}`}
                   />
                 ) : (
-                  <div className="flex size-16 items-center justify-center text-xs text-zinc-500">
+                  <div className="flex size-32 items-center justify-center text-xs text-zinc-500">
                     {imageId}
                   </div>
                 )}
