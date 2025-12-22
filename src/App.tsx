@@ -48,6 +48,9 @@ const imageUrlRegex = /image$/;
 const getThumbnailUrl = (imageUrl: string) =>
   imageUrl.replace(imageUrlRegex, "thumbnail");
 
+const getProxyUrl = (url: string) =>
+  `/api/proxy?url=${encodeURIComponent(url)}`;
+
 export default function App() {
   const [images, setImages] = useState<ImageResult[]>([]);
   const [pathImages, setPathImages] = useState<PathImage[]>([]);
@@ -478,7 +481,7 @@ const PathVisualization = ({
                 {image ? (
                   <img
                     className="size-32 object-cover"
-                    src={`/api/proxy?url=${encodeURIComponent(getThumbnailUrl(image.filename))}`}
+                    src={getProxyUrl(getThumbnailUrl(image.filename))}
                   />
                 ) : (
                   <div className="flex size-32 items-center justify-center text-xs text-zinc-500">
@@ -505,7 +508,7 @@ const SelectedImage = ({ image }: { image: PathImage }) => (
     <div className="mx-auto w-fit border border-zinc-800 bg-zinc-950">
       <img
         className="block h-auto max-h-[700px] w-full object-contain"
-        src={`/api/proxy?url=${encodeURIComponent(image.filename)}`}
+        src={getProxyUrl(image.filename)}
       />
       <div className="border-zinc-800 border-t p-3">
         <div className="text-sm text-zinc-400">
@@ -557,7 +560,7 @@ const Image = ({
     <img
       className="block h-auto w-full min-w-full"
       loading="lazy"
-      src={`/api/proxy?url=${encodeURIComponent(getThumbnailUrl(image.filename))}`}
+      src={getProxyUrl(getThumbnailUrl(image.filename))}
     />
     <div className="flex items-center justify-between border-zinc-800 border-t p-2">
       <div className="text-xs text-zinc-500">
