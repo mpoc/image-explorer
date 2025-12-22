@@ -119,20 +119,42 @@ export class CentroidPathExtrapolator implements PathExtrapolator {
 /**
  * Extrapolates along the principal axis of the path.
  * PCA finds the direction of most variance (the "long axis" of the explored region)
- * and extrapolates from the centroid along this axis based on the last point's projection.
+ * and extrapolates from the centroid along this axis.
+ *
+ * The projection direction is determined by a weighted combination of the last N points,
+ * with more recent points weighted higher (exponential decay).
  */
 export class PCAPathExtrapolator implements PathExtrapolator {
   readonly name = "pca";
   readonly extrapolationFactor: number;
+  readonly projectionWindow: number;
+  readonly decayFactor: number;
 
   /**
    * @param extrapolationFactor Controls how far to extrapolate along the principal axis.
-   * - 1.0 = land exactly where the last point projects onto the axis
-   * - \>1.0 = overshoot (more exploratory, ventures further from explored region)
-   * - <1.0 = undershoot (more conservative, stays closer to centroid)
+   *   - 1.0 = land at the weighted projection point
+   *   - >1.0 = overshoot (more exploratory)
+   *   - <1.0 = undershoot (more conservative)
+   * @param projectionWindow Number of recent points to use for direction.
+   *   - 1 = only last point (original behavior)
+   *   - >1 = blend recent points with exponential decay weighting
+   * @param decayFactor Weight decay for older points in window (0, 1).
+   *   Higher = older points retain more influence.
    */
-  constructor(extrapolationFactor = 1.5) {
+  constructor(
+    extrapolationFactor = 1.5,
+    projectionWindow = 1,
+    decayFactor = 0.6
+  ) {
+    if (projectionWindow < 1) {
+      throw new Error("projectionWindow must be at least 1");
+    }
+    if (decayFactor <= 0 || decayFactor >= 1) {
+      throw new Error("decayFactor must be in (0, 1)");
+    }
     this.extrapolationFactor = extrapolationFactor;
+    this.projectionWindow = projectionWindow;
+    this.decayFactor = decayFactor;
   }
 
   extrapolate(path: Vector[]): Vector {
@@ -146,10 +168,11 @@ export class PCAPathExtrapolator implements PathExtrapolator {
     const centroid = mean(path);
     const centered = path.map((p) => subtract(p, centroid));
 
+    // Principal axis: direction of maximum variance across all points
     const principalAxis = this.powerIteration(centered);
 
-    const lastCentered = centered.at(-1)!;
-    const projection = dot(lastCentered, principalAxis);
+    // Weighted projection: recent points influence direction more heavily
+    const projection = this.computeWeightedProjection(centered, principalAxis);
 
     const target = add(
       centroid,
@@ -157,6 +180,38 @@ export class PCAPathExtrapolator implements PathExtrapolator {
     );
 
     return normalize(target);
+  }
+
+  /**
+   * Computes projection onto principal axis using exponentially-weighted
+   * average of the last N points. Recent points get higher weight:
+   *   weight(i) = decayFactor^(distance from end)
+   *
+   * Example with window=3, decay=0.6:
+   *   last:        weight = 0.6^0 = 1.0
+   *   second-last: weight = 0.6^1 = 0.6
+   *   third-last:  weight = 0.6^2 = 0.36
+   */
+  private computeWeightedProjection(
+    centered: Vector[],
+    principalAxis: Vector
+  ): number {
+    const windowSize = Math.min(this.projectionWindow, centered.length);
+    const windowStart = centered.length - windowSize;
+
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    for (let i = 0; i < windowSize; i++) {
+      const distanceFromEnd = windowSize - 1 - i;
+      const weight = this.decayFactor ** distanceFromEnd;
+
+      const proj = dot(centered[windowStart + i], principalAxis);
+      weightedSum += weight * proj;
+      totalWeight += weight;
+    }
+
+    return weightedSum / totalWeight;
   }
 
   private powerIteration(centered: Vector[], iterations = 50): Vector {
@@ -175,7 +230,7 @@ export const extrapolators = {
   last: new LastPathExtrapolator(),
   momentum: new MomentumPathExtrapolator(0.6),
   centroid: new CentroidPathExtrapolator(),
-  pca: new PCAPathExtrapolator(1.5),
+  pca: new PCAPathExtrapolator(1.5, 15, 0.8),
 } as const;
 
 export type ExtrapolatorName = keyof typeof extrapolators;
