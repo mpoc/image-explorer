@@ -68,6 +68,7 @@ export default function App() {
 
   const { seed, id, text } = query;
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   const idList = id
     ? id
@@ -75,6 +76,10 @@ export default function App() {
         .map((s) => Number.parseInt(s.trim(), 10))
         .filter((n) => !Number.isNaN(n))
     : [];
+
+  useEffect(() => {
+    setSelectedIndex(Math.max(0, idList.length - 1));
+  }, [id]);
 
   useEffect(() => {
     setSearchInput(text || "");
@@ -251,7 +256,13 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const currentImage = pathImages.length > 0 ? pathImages.at(-1) : null;
+  const handleSelectImage = (index: number) => {
+    setSelectedIndex(index);
+  };
+
+  const selectedImageId = idList[selectedIndex];
+  const selectedImage =
+    pathImages.find((img) => img.id === selectedImageId) ?? null;
 
   return (
     <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
@@ -325,12 +336,14 @@ export default function App() {
             images={pathImages}
             onEndHere={handlePathEndHere}
             onRemove={handlePathRemove}
+            onSelect={handleSelectImage}
             onSolo={handlePathSolo}
             onStartHere={handlePathStartHere}
+            selectedIndex={selectedIndex}
           />
         )}
 
-        {currentImage && <SelectedImage image={currentImage} />}
+        {selectedImage && <SelectedImage image={selectedImage} />}
 
         {loading && (
           <div className="py-24 text-center text-zinc-500">
@@ -406,17 +419,21 @@ export default function App() {
 const PathVisualization = ({
   images,
   idList,
+  selectedIndex,
   onEndHere,
   onStartHere,
   onSolo,
   onRemove,
+  onSelect,
 }: {
   images: PathImage[];
   idList: number[];
+  selectedIndex: number;
   onEndHere: (index: number) => void;
   onStartHere: (index: number) => void;
   onSolo: (index: number) => void;
   onRemove: (index: number) => void;
+  onSelect: (index: number) => void;
 }) => (
   <div className="mb-6 border border-zinc-800 bg-zinc-900 p-4">
     <div className="mb-3 flex items-center justify-between">
@@ -429,6 +446,7 @@ const PathVisualization = ({
         const image = images.find((img) => img.id === imageId);
         const isLast = index === idList.length - 1;
         const isFirst = index === 0;
+        const isSelected = index === selectedIndex;
         return (
           <div
             className="flex shrink-0 items-center gap-2"
@@ -437,14 +455,20 @@ const PathVisualization = ({
             <div className="group relative shrink-0">
               <div
                 className={cn(
-                  "relative border-2 bg-zinc-950 transition-all",
-                  isLast ? "border-blue-500" : "border-zinc-700"
+                  "relative cursor-pointer border-2 bg-zinc-950 transition-all",
+                  isSelected
+                    ? "border-blue-500"
+                    : "border-zinc-700 hover:border-zinc-500"
                 )}
+                onClick={() => onSelect(index)}
               >
                 {/* Top-left: Solo (just this image) */}
                 <button
                   className="absolute top-0 left-0 z-10 flex size-8 items-center justify-center bg-green-600/80 text-sm opacity-0 transition-opacity hover:bg-green-500 group-hover:opacity-100"
-                  onClick={() => onSolo(index)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSolo(index);
+                  }}
                   title="Just this image"
                   type="button"
                 >
@@ -453,7 +477,10 @@ const PathVisualization = ({
                 {/* Top-right: Remove */}
                 <button
                   className="absolute top-0 right-0 z-10 flex size-8 items-center justify-center bg-red-900/80 text-sm opacity-0 transition-opacity hover:bg-red-700 group-hover:opacity-100"
-                  onClick={() => onRemove(index)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(index);
+                  }}
                   title="Remove from path"
                   type="button"
                 >
@@ -463,7 +490,10 @@ const PathVisualization = ({
                 {!isFirst && (
                   <button
                     className="absolute bottom-0 left-0 z-10 flex size-8 items-center justify-center bg-zinc-700/80 text-sm opacity-0 transition-opacity hover:bg-zinc-600 group-hover:opacity-100"
-                    onClick={() => onStartHere(index)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStartHere(index);
+                    }}
                     title="Keep this and after"
                     type="button"
                   >
@@ -474,7 +504,10 @@ const PathVisualization = ({
                 {!isLast && (
                   <button
                     className="absolute right-0 bottom-0 z-10 flex size-8 items-center justify-center bg-zinc-700/80 text-sm opacity-0 transition-opacity hover:bg-zinc-600 group-hover:opacity-100"
-                    onClick={() => onEndHere(index)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEndHere(index);
+                    }}
                     title="Keep this and before"
                     type="button"
                   >
@@ -485,18 +518,18 @@ const PathVisualization = ({
                 <div
                   className={cn(
                     "absolute bottom-0 left-0 z-0 flex size-8 items-center justify-center font-medium text-sm transition-opacity group-hover:opacity-0",
-                    isLast ? "bg-blue-500" : "bg-zinc-700"
+                    isSelected ? "bg-blue-500" : "bg-zinc-700"
                   )}
                 >
                   {index + 1}
                 </div>
                 {image ? (
                   <img
-                    className="size-32 object-cover"
+                    className="size-28 object-cover"
                     src={getProxyUrl(getThumbnailUrl(image.filename))}
                   />
                 ) : (
-                  <div className="flex size-32 items-center justify-center text-xs text-zinc-500">
+                  <div className="flex size-28 items-center justify-center text-xs text-zinc-500">
                     {imageId}
                   </div>
                 )}
@@ -515,11 +548,11 @@ const PathVisualization = ({
 const SelectedImage = ({ image }: { image: PathImage }) => (
   <div className="mb-6 border-2 border-blue-500 bg-zinc-900 p-4">
     <h3 className="mb-3 font-medium text-sm text-zinc-400 uppercase tracking-wide">
-      Current
+      Selected
     </h3>
     <div className="mx-auto w-fit border border-zinc-800 bg-zinc-950">
       <img
-        className="block h-auto max-h-[700px] w-full object-contain"
+        className="block h-auto max-h-[650px] w-full object-contain"
         src={getProxyUrl(image.filename)}
       />
       <div className="border-zinc-800 border-t p-3">
