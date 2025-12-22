@@ -1,7 +1,7 @@
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
-import { cn } from "./utils";
+import { cn, shouldNavigateInPlace } from "./utils";
 import "./index.css";
 
 type ImageResult = {
