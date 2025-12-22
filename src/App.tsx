@@ -198,6 +198,10 @@ export default function App() {
   };
 
   const handleImageClick = (imageId: number, e: React.MouseEvent) => {
+    if (!shouldNavigateInPlace(e)) {
+      return;
+    }
+
     e.preventDefault();
 
     const newPath = [...idList, imageId];
