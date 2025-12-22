@@ -465,7 +465,7 @@ const PathVisualization = ({
               >
                 {/* Top-left: Solo (just this image) */}
                 <button
-                  className="absolute top-0 left-0 z-10 flex size-8 items-center justify-center bg-green-600/80 text-sm opacity-0 transition-opacity hover:bg-green-500 group-hover:opacity-100"
+                  className="absolute top-0 left-0 z-10 flex size-6 items-center justify-center bg-green-600/80 text-sm opacity-0 transition-opacity hover:bg-green-500 group-hover:opacity-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     onSolo(index);
@@ -477,7 +477,7 @@ const PathVisualization = ({
                 </button>
                 {/* Top-right: Remove */}
                 <button
-                  className="absolute top-0 right-0 z-10 flex size-8 items-center justify-center bg-red-900/80 text-sm opacity-0 transition-opacity hover:bg-red-700 group-hover:opacity-100"
+                  className="absolute top-0 right-0 z-10 flex size-6 items-center justify-center bg-red-900/80 text-sm opacity-0 transition-opacity hover:bg-red-700 group-hover:opacity-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     onRemove(index);
@@ -490,7 +490,7 @@ const PathVisualization = ({
                 {/* Bottom-left: Truncate start (keep this and after) */}
                 {!isFirst && (
                   <button
-                    className="absolute bottom-0 left-0 z-10 flex size-8 items-center justify-center bg-zinc-700/80 text-sm opacity-0 transition-opacity hover:bg-zinc-600 group-hover:opacity-100"
+                    className="absolute bottom-0 left-0 z-10 flex size-6 items-center justify-center bg-zinc-700/80 text-sm opacity-0 transition-opacity hover:bg-zinc-600 group-hover:opacity-100"
                     onClick={(e) => {
                       e.stopPropagation();
                       onStartHere(index);
@@ -504,7 +504,7 @@ const PathVisualization = ({
                 {/* Bottom-right: Truncate end (keep this and before) */}
                 {!isLast && (
                   <button
-                    className="absolute right-0 bottom-0 z-10 flex size-8 items-center justify-center bg-zinc-700/80 text-sm opacity-0 transition-opacity hover:bg-zinc-600 group-hover:opacity-100"
+                    className="absolute right-0 bottom-0 z-10 flex size-6 items-center justify-center bg-zinc-700/80 text-sm opacity-0 transition-opacity hover:bg-zinc-600 group-hover:opacity-100"
                     onClick={(e) => {
                       e.stopPropagation();
                       onEndHere(index);
@@ -518,7 +518,7 @@ const PathVisualization = ({
                 {/* Index badge - shown when not hovering */}
                 <div
                   className={cn(
-                    "absolute bottom-0 left-0 z-0 flex size-8 items-center justify-center font-medium text-sm transition-opacity group-hover:opacity-0",
+                    "absolute bottom-0 left-0 z-0 flex size-6 items-center justify-center font-medium text-sm transition-opacity group-hover:opacity-0",
                     isSelected ? "bg-blue-500" : "bg-zinc-700"
                   )}
                 >
