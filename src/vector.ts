@@ -25,10 +25,12 @@ export const zero = (dimensions: number): Vector =>
 export const lerp = (a: Vector, b: Vector, t: number): Vector =>
   a.map((val, i) => val + t * (b[i] - val));
 
-export const mean = (vectors: Vector[]): Vector => {
+export const mean = (vectors: Vector[]): Vector =>
+  scale(sum(vectors), 1 / vectors.length);
+
+export const sum = (vectors: Vector[]): Vector => {
   if (vectors.length === 0) {
-    throw new Error("Cannot compute mean of empty array");
+    throw new Error("Cannot sum empty array");
   }
-  const sum = vectors.reduce((acc, v) => add(acc, v), zero(vectors[0].length));
-  return scale(sum, 1 / vectors.length);
+  return vectors.reduce((acc, v) => add(acc, v), zero(vectors[0].length));
 };

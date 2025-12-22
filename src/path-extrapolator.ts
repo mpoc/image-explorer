@@ -1,5 +1,15 @@
 import assert from "node:assert/strict";
-import { add, mean, normalize, subtract, type Vector, zero } from "./vector";
+import {
+  add,
+  dot,
+  mean,
+  normalize,
+  scale,
+  subtract,
+  sum,
+  type Vector,
+  zero,
+} from "./vector";
 
 /**
  * Interface for path extrapolation strategies.
@@ -106,10 +116,66 @@ export class CentroidPathExtrapolator implements PathExtrapolator {
   }
 }
 
+/**
+ * Extrapolates along the principal axis of the path.
+ * PCA finds the direction of most variance (the "long axis" of the explored region)
+ * and extrapolates from the centroid along this axis based on the last point's projection.
+ */
+export class PCAPathExtrapolator implements PathExtrapolator {
+  readonly name = "pca";
+  readonly extrapolationFactor: number;
+
+  /**
+   * @param extrapolationFactor Controls how far to extrapolate along the principal axis.
+   * - 1.0 = land exactly where the last point projects onto the axis
+   * - \>1.0 = overshoot (more exploratory, ventures further from explored region)
+   * - <1.0 = undershoot (more conservative, stays closer to centroid)
+   */
+  constructor(extrapolationFactor = 1.5) {
+    this.extrapolationFactor = extrapolationFactor;
+  }
+
+  extrapolate(path: Vector[]): Vector {
+    if (path.length === 0) {
+      throw new Error("Path cannot be empty");
+    }
+    if (path.length < 3) {
+      return normalize(mean(path));
+    }
+
+    const centroid = mean(path);
+    const centered = path.map((p) => subtract(p, centroid));
+
+    const principalAxis = this.powerIteration(centered);
+
+    const lastCentered = centered.at(-1)!;
+    const projection = dot(lastCentered, principalAxis);
+
+    const target = add(
+      centroid,
+      scale(principalAxis, projection * this.extrapolationFactor)
+    );
+
+    return normalize(target);
+  }
+
+  private powerIteration(centered: Vector[], iterations = 50): Vector {
+    let v = normalize(centered[0]);
+
+    for (let i = 0; i < iterations; i++) {
+      const Cv = sum(centered.map((x) => scale(x, dot(x, v))));
+      v = normalize(Cv);
+    }
+
+    return v;
+  }
+}
+
 export const extrapolators = {
   last: new LastPathExtrapolator(),
   momentum: new MomentumPathExtrapolator(0.6),
   centroid: new CentroidPathExtrapolator(),
+  pca: new PCAPathExtrapolator(1.5),
 } as const;
 
 export type ExtrapolatorName = keyof typeof extrapolators;
@@ -117,4 +183,4 @@ export type ExtrapolatorName = keyof typeof extrapolators;
 export const getExtrapolator = (name: ExtrapolatorName): PathExtrapolator =>
   extrapolators[name];
 
-export const DEFAULT_EXTRAPOLATOR: ExtrapolatorName = "momentum";
+export const DEFAULT_EXTRAPOLATOR: ExtrapolatorName = "pca";
