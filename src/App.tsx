@@ -215,44 +215,27 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
-  const handlePathEndHere = (index: number) => {
-    const newPath = idList.slice(0, index + 1);
+  const updatePath = (newIdList: number[] | null) => {
     setQuery(
-      { id: newPath.join(","), seed: null, text: null },
+      {
+        id: newIdList?.join(",") ?? null,
+        seed: newIdList ? null : 42,
+        text: null,
+      },
       { history: "push" }
     );
   };
 
-  const handlePathStartHere = (index: number) => {
-    const newPath = idList.slice(index);
-    setQuery(
-      { id: newPath.join(","), seed: null, text: null },
-      { history: "push" }
-    );
-  };
-
-  const handlePathSolo = (index: number) => {
-    setQuery(
-      { id: String(idList[index]), seed: null, text: null },
-      { history: "push" }
-    );
-  };
-
+  const handlePathEndHere = (index: number) =>
+    updatePath(idList.slice(0, index + 1));
+  const handlePathStartHere = (index: number) =>
+    updatePath(idList.slice(index));
+  const handlePathSolo = (index: number) => updatePath([idList[index]]);
   const handlePathRemove = (index: number) => {
     const newPath = idList.filter((_, i) => i !== index);
-    if (newPath.length === 0) {
-      setQuery({ id: null, seed: 42, text: null }, { history: "push" });
-    } else {
-      setQuery(
-        { id: newPath.join(","), seed: null, text: null },
-        { history: "push" }
-      );
-    }
+    updatePath(newPath.length ? newPath : null);
   };
-
-  const handleClearPath = () => {
-    setQuery({ id: null, seed: 42, text: null }, { history: "push" });
-  };
+  const handleClearPath = () => updatePath(null);
 
   const currentImage = pathImages.length > 0 ? pathImages.at(-1) : null;
 
