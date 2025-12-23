@@ -1,40 +1,17 @@
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
 import { useInfiniteScroll } from "./useInfiniteScroll";
 import { useShowBackToTop } from "./useShowBackToTop";
 import { cn, shouldNavigateInPlace } from "./utils";
 import "./index.css";
-
-type ImageResult = {
-  id: number;
-  filename: string;
-  distance: number;
-};
-
-type SimilarResponse = {
-  source: { id: number; filename: string }[];
-  results: ImageResult[];
-  hasMore: boolean;
-};
-
-type SearchResponse = {
-  query: string;
-  results: ImageResult[];
-  hasMore: boolean;
-};
-
-type RandomResponse = {
-  results: ImageResult[];
-  hasMore: boolean;
-};
-
-type PathImage = {
-  id: number;
-  filename: string;
-};
-
-const LIMIT = 40;
+import {
+  type ImageResult,
+  type PathImage,
+  useRandomImages,
+  useSearchImages,
+  useSimilarImages,
+} from "./useImages";
 
 const getImagePageUrl = (imageUrl: string) => {
   const parsedUrl = new URL(imageUrl);
@@ -54,12 +31,6 @@ const getProxyUrl = (url: string) =>
   `/api/proxy?url=${encodeURIComponent(url)}`;
 
 export default function App() {
-  const [images, setImages] = useState<ImageResult[]>([]);
-  const [pathImages, setPathImages] = useState<PathImage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const showBackToTop = useShowBackToTop(400);
   const [query, setQuery] = useQueryStates({
     seed: parseAsInteger.withDefault(42),
@@ -70,11 +41,6 @@ export default function App() {
 
   const { seed, id, text } = query;
 
-  const sentinelRef = useInfiniteScroll(
-    () => loadImages(images.length, false),
-    hasMore && !loading && !loadingMore
-  );
-
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   const idList = id
@@ -84,90 +50,39 @@ export default function App() {
         .filter((n) => !Number.isNaN(n))
     : [];
 
+  const mode = text ? "search" : idList.length > 0 ? "similar" : "random";
+
+  const randomQuery = useRandomImages(seed, mode === "random");
+  const similarQuery = useSimilarImages(idList, mode === "similar");
+  const searchQuery = useSearchImages(text ?? "", mode === "search");
+
+  const activeQuery =
+    mode === "search"
+      ? searchQuery
+      : mode === "similar"
+        ? similarQuery
+        : randomQuery;
+
+  const images = activeQuery.data?.pages.flatMap((p) => p.results) ?? [];
+  const pathImages = similarQuery.data?.pages[0]?.source ?? [];
+  const loading = activeQuery.isLoading;
+  const loadingMore = activeQuery.isFetchingNextPage;
+  const hasMore = activeQuery.hasNextPage;
+  const error =
+    activeQuery.error instanceof Error ? activeQuery.error.message : null;
+
+  const sentinelRef = useInfiniteScroll(
+    () => activeQuery.fetchNextPage(),
+    hasMore && !loading && !loadingMore
+  );
+
   useEffect(() => {
     setSelectedIndex(Math.max(0, idList.length - 1));
-  }, [id]);
+  }, [idList.length]);
 
   useEffect(() => {
     setSearchInput(text || "");
   }, [text]);
-
-  // Reset and load initial images when query params change
-  useEffect(() => {
-    loadImages(0, true);
-  }, [id, seed, text]);
-
-  const loadImages = useCallback(
-    async (offset: number, reset: boolean) => {
-      if (reset) {
-        setLoading(true);
-        setError(null);
-        setImages([]);
-        setHasMore(false);
-      } else {
-        setLoadingMore(true);
-      }
-
-      try {
-        let url: string;
-
-        if (text) {
-          // Text search mode
-          url = `/api/search?text=${encodeURIComponent(text)}&limit=${LIMIT}&offset=${offset}`;
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error("Failed to load images");
-          }
-          const data: SearchResponse = await response.json();
-          setImages((prev) =>
-            reset ? data.results : [...prev, ...data.results]
-          );
-          setHasMore(data.hasMore);
-          if (reset) {
-            setPathImages([]);
-          }
-        } else if (idList.length > 0) {
-          // Similar images mode
-          url = `/api/similar?id=${idList.join(",")}&limit=${LIMIT}&offset=${offset}`;
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error("Failed to load images");
-          }
-          const data: SimilarResponse = await response.json();
-          setImages((prev) =>
-            reset ? data.results : [...prev, ...data.results]
-          );
-          setHasMore(data.hasMore);
-          if (reset) {
-            setPathImages(
-              Array.isArray(data.source) ? data.source : [data.source]
-            );
-          }
-        } else {
-          // Random seed mode
-          url = `/api/random?seed=${seed}&limit=${LIMIT}&offset=${offset}`;
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error("Failed to load images");
-          }
-          const data: RandomResponse = await response.json();
-          setImages((prev) =>
-            reset ? data.results : [...prev, ...data.results]
-          );
-          setHasMore(data.hasMore);
-          if (reset) {
-            setPathImages([]);
-          }
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
-      }
-    },
-    [text, idList.join(","), seed]
-  );
 
   const handleNewSeed = () => {
     const newSeed = Math.floor(Math.random() * 1_000_000);
