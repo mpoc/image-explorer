@@ -5,59 +5,9 @@ import { MODEL_NAME } from "./config";
 import { db, embeddings } from "./db";
 import { computeTextEmbedding } from "./embeddings";
 import dashboard from "./frontend/dashboard.html";
-import { generateEmbeddingFromSeed } from "./generateEmbeddingFromSeed";
 import { DEFAULT_EXTRAPOLATOR, getExtrapolator } from "./path-extrapolator";
+import { getImagesByEmbedding, getRandomImages } from "./queries";
 import { CsvIds } from "./shared/utils";
-
-const getRandomImages = async (
-  mode: "random_embedding" | "random_images",
-  seed: number,
-  limit: number,
-  offset: number
-) => {
-  // Get random images in a deterministic order
-  if (mode === "random_images") {
-    const randomOrder = sql<number>`((${embeddings.id} + ${seed}) * 2654435761) % 4294967296`;
-
-    const results = await db
-      .select({
-        id: embeddings.id,
-        filename: embeddings.filename,
-      })
-      .from(embeddings)
-      .where(eq(embeddings.model, MODEL_NAME))
-      .orderBy(asc(randomOrder))
-      .limit(limit)
-      .offset(offset)
-      .all();
-
-    return results;
-  }
-
-  // Find images similar to a random embedding
-  if (mode === "random_embedding") {
-    const seedEmbedding = generateEmbeddingFromSeed(seed);
-
-    const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(seedEmbedding)}))`;
-
-    const results = await db
-      .select({
-        id: embeddings.id,
-        filename: embeddings.filename,
-        distance: distanceExpression,
-      })
-      .from(embeddings)
-      .where(eq(embeddings.model, MODEL_NAME))
-      .orderBy(asc(distanceExpression))
-      .limit(limit)
-      .offset(offset)
-      .all();
-
-    return results;
-  }
-
-  throw new Error(`Unknown random mode: ${mode}`);
-};
 
 const server = serve({
   port: 3000,
@@ -223,21 +173,11 @@ const server = serve({
           // Get the embedding for the search text
           const textEmbedding = await computeTextEmbedding(text);
 
-          const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(textEmbedding)}))`;
-
-          // Find images similar to this text embedding
-          const results = await db
-            .select({
-              id: embeddings.id,
-              filename: embeddings.filename,
-              distance: distanceExpression,
-            })
-            .from(embeddings)
-            .where(eq(embeddings.model, MODEL_NAME))
-            .orderBy(asc(distanceExpression))
-            .limit(limit)
-            .offset(offset)
-            .all();
+          const results = await getImagesByEmbedding(
+            textEmbedding,
+            limit,
+            offset
+          );
 
           console.log(
             `Found ${results.length} images matching text: "${text}" (offset=${offset})`
