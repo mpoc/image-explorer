@@ -1,10 +1,8 @@
+import "./index.css";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useState } from "react";
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
-import { useInfiniteScroll } from "./useInfiniteScroll";
-import { useShowBackToTop } from "./useShowBackToTop";
-import { cn, shouldNavigateInPlace } from "./utils";
-import "./index.css";
+import { CsvIds } from "./shared/utils";
 import {
   type ImageResult,
   type PathImage,
@@ -12,6 +10,9 @@ import {
   useSearchImages,
   useSimilarImages,
 } from "./useImages";
+import { useInfiniteScroll } from "./useInfiniteScroll";
+import { useShowBackToTop } from "./useShowBackToTop";
+import { cn, shouldNavigateInPlace } from "./utils";
 
 const getImagePageUrl = (imageUrl: string) => {
   const parsedUrl = new URL(imageUrl);
@@ -43,12 +44,7 @@ export default function App() {
 
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
-  const idList = id
-    ? id
-        .split(",")
-        .map((s) => Number.parseInt(s.trim(), 10))
-        .filter((n) => !Number.isNaN(n))
-    : [];
+  const idList = CsvIds.decode(id);
 
   const mode = text ? "search" : idList.length > 0 ? "similar" : "random";
 
@@ -120,7 +116,7 @@ export default function App() {
   const updatePath = (newIdList: number[] | null) => {
     setQuery(
       {
-        id: newIdList?.join(",") ?? null,
+        id: newIdList ? CsvIds.encode(newIdList) : null,
         seed: newIdList ? null : 42,
         text: null,
       },
@@ -212,7 +208,7 @@ export default function App() {
           )}
           {idList.length > 0 && (
             <p className="mt-1 font-mono text-xs text-zinc-500">
-              {window.location.origin}?id={idList.join(",")}
+              {window.location.origin}?id={CsvIds.encode(idList)}
             </p>
           )}
         </div>
@@ -482,7 +478,7 @@ const Image = ({
   >
     <a
       className="absolute inset-0 z-0"
-      href={`?id=${[...idList, image.id].join(",")}`}
+      href={`?id=${CsvIds.encode([...idList, image.id])}`}
       onClick={(e) => onImageClick(e)}
     />
     {isInPath && (

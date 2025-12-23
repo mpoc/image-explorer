@@ -1,4 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { CsvIds } from "./shared/utils";
 
 export type SimilarResponse = {
   source: { id: number; filename: string }[];
@@ -53,7 +54,7 @@ export const useSimilarImages = (ids: number[], enabled: boolean) =>
     queryKey: ["images", "similar", ids],
     queryFn: async ({ pageParam = 0 }) => {
       const res = await fetch(
-        `/api/similar?id=${ids.join(",")}&limit=${LIMIT}&offset=${pageParam}`
+        `/api/similar?id=${CsvIds.encode(ids)}&limit=${LIMIT}&offset=${pageParam}`
       );
       if (!res.ok) {
         throw new Error("Failed to load images");

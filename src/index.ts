@@ -7,16 +7,7 @@ import { db, embeddings } from "./db";
 import { computeTextEmbedding } from "./embeddings";
 import { generateEmbeddingFromSeed } from "./generateEmbeddingFromSeed";
 import { DEFAULT_EXTRAPOLATOR, getExtrapolator } from "./path-extrapolator";
-
-const parseIdList = (idParam: string | null): number[] => {
-  if (!idParam) {
-    return [];
-  }
-  return idParam
-    .split(",")
-    .map((s) => Number.parseInt(s.trim(), 10))
-    .filter((n) => !Number.isNaN(n));
-};
+import { CsvIds } from "./shared/utils";
 
 const getRandomImages = async (
   mode: "random_embedding" | "random_images",
@@ -118,7 +109,7 @@ const server = serve({
     "/api/similar": {
       async GET(req) {
         const url = new URL(req.url);
-        const idList = parseIdList(url.searchParams.get("id"));
+        const idList = CsvIds.decode(url.searchParams.get("id"));
         const limit = z.coerce
           .number()
           .max(200)
@@ -192,7 +183,7 @@ const server = serve({
           const endedAt = performance.now();
 
           console.log(
-            `Found ${results.length} similar images for path [${idList.join(",")}] (offset=${offset}), took ${(endedAt - startedAt).toFixed(2)} ms`
+            `Found ${results.length} similar images for path [${CsvIds.encode(idList)}] (offset=${offset}), took ${(endedAt - startedAt).toFixed(2)} ms`
           );
 
           return Response.json({
