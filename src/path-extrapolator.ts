@@ -18,7 +18,7 @@ import {
  */
 export type PathExtrapolator = {
   readonly name: string;
-  extrapolate(path: Vector[]): Vector;
+  extrapolate(path: Vector[]): { vector: Vector; tookMs: number };
 };
 
 /**
@@ -28,13 +28,14 @@ export type PathExtrapolator = {
 export class LastPathExtrapolator implements PathExtrapolator {
   readonly name = "last";
 
-  extrapolate(path: Vector[]): Vector {
+  extrapolate(path: Vector[]) {
+    const startedAt = performance.now();
     if (path.length === 0) {
       throw new Error("Path cannot be empty");
     }
     const last = path.at(-1);
     assert(last);
-    return last;
+    return { vector: last, tookMs: performance.now() - startedAt };
   }
 }
 
@@ -60,14 +61,16 @@ export class MomentumPathExtrapolator implements PathExtrapolator {
     this.alpha = alpha;
   }
 
-  extrapolate(path: Vector[]): Vector {
+  extrapolate(path: Vector[]) {
+    const startedAt = performance.now();
+
     if (path.length === 0) {
       throw new Error("Path cannot be empty");
     }
 
     // Single point: no velocity information
     if (path.length === 1) {
-      return path[0];
+      return { vector: path[0], tookMs: performance.now() - startedAt };
     }
 
     const velocityEma = this.computeVelocityEma(path);
@@ -75,8 +78,10 @@ export class MomentumPathExtrapolator implements PathExtrapolator {
     assert(lastPosition);
     const extrapolated = add(lastPosition, velocityEma);
 
-    // Renormalize to stay on the unit hypersphere
-    return normalize(extrapolated);
+    // Renormalise to stay on the unit hypersphere
+    const nomrmalised = normalize(extrapolated);
+
+    return { vector: nomrmalised, tookMs: performance.now() - startedAt };
   }
 
   private computeVelocityEma(path: Vector[]): Vector {
@@ -107,12 +112,14 @@ export class MomentumPathExtrapolator implements PathExtrapolator {
 export class CentroidPathExtrapolator implements PathExtrapolator {
   readonly name = "centroid";
 
-  extrapolate(path: Vector[]): Vector {
+  extrapolate(path: Vector[]) {
+    const startedAt = performance.now();
     if (path.length === 0) {
       throw new Error("Path cannot be empty");
     }
 
-    return normalize(mean(path));
+    const normalised = normalize(mean(path));
+    return { vector: normalised, tookMs: performance.now() - startedAt };
   }
 }
 
@@ -157,12 +164,15 @@ export class PCAPathExtrapolator implements PathExtrapolator {
     this.decayFactor = decayFactor;
   }
 
-  extrapolate(path: Vector[]): Vector {
+  extrapolate(path: Vector[]) {
+    const startedAt = performance.now();
+
     if (path.length === 0) {
       throw new Error("Path cannot be empty");
     }
     if (path.length < 3) {
-      return normalize(mean(path));
+      const normalised = normalize(mean(path));
+      return { vector: normalised, tookMs: performance.now() - startedAt };
     }
 
     const centroid = mean(path);
@@ -179,7 +189,9 @@ export class PCAPathExtrapolator implements PathExtrapolator {
       scale(principalAxis, projection * this.extrapolationFactor)
     );
 
-    return normalize(target);
+    const normalised = normalize(target);
+
+    return { vector: normalised, tookMs: performance.now() - startedAt };
   }
 
   /**

@@ -21,6 +21,7 @@ export const computeTextEmbedding = async (text: string) => {
   const data = await response.json();
   return EmbeddingRecord.parse(data).embedding;
 };
+
 export const computeImageEmbedding = async (imagePath: string) => {
   const url = new URL(imagePath);
   const image =

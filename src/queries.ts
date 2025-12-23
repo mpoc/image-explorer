@@ -39,7 +39,7 @@ export const fetchSimilarImages = async ({
     .all();
   const endedAt = performance.now();
 
-  return { results, endedAt, startedAt };
+  return { results, tookMs: endedAt - startedAt, startedAt, endedAt };
 };
 
 export const getRandomImages = async (
@@ -48,6 +48,8 @@ export const getRandomImages = async (
   limit: number,
   offset: number
 ) => {
+  const startedAt = performance.now();
+
   // Get random images in a deterministic order
   if (mode === "random_images") {
     const randomOrder = sql<number>`((${embeddings.id} + ${seed}) * 2654435761) % 4294967296`;
@@ -64,7 +66,8 @@ export const getRandomImages = async (
       .offset(offset)
       .all();
 
-    return results;
+    const endedAt = performance.now();
+    return { results, tookMs: endedAt - startedAt, startedAt, endedAt };
   }
 
   // Find images similar to a random embedding
@@ -75,7 +78,8 @@ export const getRandomImages = async (
       limit,
       offset,
     });
-    return results;
+    const endedAt = performance.now();
+    return { results, tookMs: endedAt - startedAt, startedAt, endedAt };
   }
 
   throw new Error(`Unknown random mode: ${mode}`);

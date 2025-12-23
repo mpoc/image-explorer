@@ -33,10 +33,15 @@ const server = serve({
           .parse(url.searchParams.get("mode") || "random_images");
 
         try {
-          const results = await getRandomImages(mode, seed, limit, offset);
+          const { results, tookMs } = await getRandomImages(
+            mode,
+            seed,
+            limit,
+            offset
+          );
 
           console.log(
-            `Generated ${results.length} random images for seed ${seed} (offset=${offset})`
+            `Generated ${results.length} random images for seed ${seed} (offset=${offset}), took ${tookMs.toFixed(2)} ms`
           );
 
           if (results.length === 0 && offset === 0) {
@@ -96,10 +101,11 @@ const server = serve({
 
           const pathEmbeddings = orderedPath.map((p) => p.embedding);
           const extrapolator = getExtrapolator(DEFAULT_EXTRAPOLATOR);
-          const targetEmbedding = extrapolator.extrapolate(pathEmbeddings);
+          const { vector: targetEmbedding, tookMs: extrapolationTime } =
+            extrapolator.extrapolate(pathEmbeddings);
 
           // Find similar images, excluding all images in the path
-          const { results, endedAt, startedAt } = await fetchSimilarImages({
+          const { results, tookMs: queryTime } = await fetchSimilarImages({
             embedding: targetEmbedding,
             excludeIds: idList, // Exclude all path images, TODO: Rethink this approach, maybe only exclude last image?
             limit,
@@ -107,7 +113,7 @@ const server = serve({
           });
 
           console.log(
-            `Found ${results.length} similar images for path [${CsvIds.encode(idList)}] (offset=${offset}), took ${(endedAt - startedAt).toFixed(2)} ms`
+            `Found ${results.length} similar images for path [${CsvIds.encode(idList)}] (offset=${offset}), extrapolation took ${extrapolationTime.toFixed(2)} ms, query took ${queryTime.toFixed(2)} ms`
           );
 
           return Response.json({
@@ -147,14 +153,14 @@ const server = serve({
           // Get the embedding for the search text
           const textEmbedding = await computeTextEmbedding(text);
 
-          const { results } = await fetchSimilarImages({
+          const { results, tookMs } = await fetchSimilarImages({
             embedding: textEmbedding,
             limit,
             offset,
           });
 
           console.log(
-            `Found ${results.length} images matching text: "${text}" (offset=${offset})`
+            `Found ${results.length} images matching text: "${text}" (offset=${offset}), took ${tookMs.toFixed(2)} ms`
           );
 
           return Response.json({
