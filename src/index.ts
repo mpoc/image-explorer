@@ -1,12 +1,14 @@
 import Bun, { serve } from "bun";
-import { and, asc, eq, inArray, not, sql } from "drizzle-orm";
 import { z } from "zod";
 import { MODEL_NAME } from "./config";
-import { db, embeddings } from "./db";
 import { computeTextEmbedding } from "./embeddings";
 import dashboard from "./frontend/dashboard.html";
 import { DEFAULT_EXTRAPOLATOR, getExtrapolator } from "./path-extrapolator";
-import { getImagesByEmbedding, getRandomImages } from "./queries";
+import {
+  fetchImagesByIds,
+  fetchSimilarImages,
+  getRandomImages,
+} from "./queries";
 import { CsvIds } from "./shared/utils";
 
 const server = serve({
@@ -77,20 +79,7 @@ const server = serve({
 
         try {
           // Fetch all embeddings for the path
-          const pathResults = await db
-            .select({
-              id: embeddings.id,
-              embedding: embeddings.embedding,
-              filename: embeddings.filename,
-            })
-            .from(embeddings)
-            .where(
-              and(
-                inArray(embeddings.id, idList),
-                eq(embeddings.model, MODEL_NAME)
-              )
-            )
-            .all();
+          const pathResults = await fetchImagesByIds(idList);
 
           const embeddingMap = new Map(pathResults.map((r) => [r.id, r]));
 
@@ -109,28 +98,13 @@ const server = serve({
           const extrapolator = getExtrapolator(DEFAULT_EXTRAPOLATOR);
           const targetEmbedding = extrapolator.extrapolate(pathEmbeddings);
 
-          const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(targetEmbedding)}))`;
-
           // Find similar images, excluding all images in the path
-          const startedAt = performance.now();
-          const results = await db
-            .select({
-              id: embeddings.id,
-              filename: embeddings.filename,
-              distance: distanceExpression,
-            })
-            .from(embeddings)
-            .where(
-              and(
-                not(inArray(embeddings.id, idList)), // Exclude all path images, TODO: Rethink this approach, maybe only exclude last image?
-                eq(embeddings.model, MODEL_NAME)
-              )
-            )
-            .orderBy(asc(distanceExpression))
-            .limit(limit)
-            .offset(offset)
-            .all();
-          const endedAt = performance.now();
+          const { results, endedAt, startedAt } = await fetchSimilarImages({
+            embedding: targetEmbedding,
+            excludeIds: idList, // Exclude all path images, TODO: Rethink this approach, maybe only exclude last image?
+            limit,
+            offset,
+          });
 
           console.log(
             `Found ${results.length} similar images for path [${CsvIds.encode(idList)}] (offset=${offset}), took ${(endedAt - startedAt).toFixed(2)} ms`
@@ -173,11 +147,11 @@ const server = serve({
           // Get the embedding for the search text
           const textEmbedding = await computeTextEmbedding(text);
 
-          const results = await getImagesByEmbedding(
-            textEmbedding,
+          const { results } = await fetchSimilarImages({
+            embedding: textEmbedding,
             limit,
-            offset
-          );
+            offset,
+          });
 
           console.log(
             `Found ${results.length} images matching text: "${text}" (offset=${offset})`

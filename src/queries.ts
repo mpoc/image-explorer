@@ -1,16 +1,25 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, not, sql } from "drizzle-orm";
 import { MODEL_NAME } from "./config";
 import { db, embeddings } from "./db";
 import { generateEmbeddingFromSeed } from "./generateEmbeddingFromSeed";
 
-export const getImagesByEmbedding = async (
-  textEmbedding: number[],
-  limit: number,
-  offset: number
-) => {
-  const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(textEmbedding)}))`;
+export const getEmbeddingDistanceExpression = (textEmbedding: number[]) =>
+  sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(textEmbedding)}))`;
 
-  // Find images similar to this text embedding
+export const fetchSimilarImages = async ({
+  embedding,
+  excludeIds = [],
+  limit,
+  offset,
+}: {
+  embedding: number[];
+  excludeIds?: number[];
+  limit: number;
+  offset: number;
+}) => {
+  const distanceExpression = getEmbeddingDistanceExpression(embedding);
+
+  const startedAt = performance.now();
   const results = await db
     .select({
       id: embeddings.id,
@@ -18,13 +27,19 @@ export const getImagesByEmbedding = async (
       distance: distanceExpression,
     })
     .from(embeddings)
-    .where(eq(embeddings.model, MODEL_NAME))
+    .where(
+      and(
+        not(inArray(embeddings.id, excludeIds)),
+        eq(embeddings.model, MODEL_NAME)
+      )
+    )
     .orderBy(asc(distanceExpression))
     .limit(limit)
     .offset(offset)
     .all();
+  const endedAt = performance.now();
 
-  return results;
+  return { results, endedAt, startedAt };
 };
 
 export const getRandomImages = async (
@@ -55,9 +70,26 @@ export const getRandomImages = async (
   // Find images similar to a random embedding
   if (mode === "random_embedding") {
     const seedEmbedding = generateEmbeddingFromSeed(seed);
-    const results = await getImagesByEmbedding(seedEmbedding, limit, offset);
+    const { results } = await fetchSimilarImages({
+      embedding: seedEmbedding,
+      limit,
+      offset,
+    });
     return results;
   }
 
   throw new Error(`Unknown random mode: ${mode}`);
 };
+
+export const fetchImagesByIds = async (idList: number[]) =>
+  await db
+    .select({
+      id: embeddings.id,
+      embedding: embeddings.embedding,
+      filename: embeddings.filename,
+    })
+    .from(embeddings)
+    .where(
+      and(inArray(embeddings.id, idList), eq(embeddings.model, MODEL_NAME))
+    )
+    .all();
