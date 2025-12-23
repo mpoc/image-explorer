@@ -1,6 +1,7 @@
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
+import { useInfiniteScroll } from "./useInfiniteScroll";
 import { useShowBackToTop } from "./useShowBackToTop";
 import { cn, shouldNavigateInPlace } from "./utils";
 import "./index.css";
@@ -68,7 +69,12 @@ export default function App() {
   const [searchInput, setSearchInput] = useState("");
 
   const { seed, id, text } = query;
-  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const sentinelRef = useInfiniteScroll(
+    () => loadImages(images.length, false),
+    hasMore && !loading && !loadingMore
+  );
+
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   const idList = id
@@ -162,32 +168,6 @@ export default function App() {
     },
     [text, idList.join(","), seed]
   );
-
-  // Infinite scroll observer
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry.isIntersecting && hasMore && !loading && !loadingMore) {
-          loadImages(images.length, false);
-        }
-      },
-      {
-        rootMargin: "2000px",
-      }
-    );
-
-    observer.observe(sentinel);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [hasMore, loading, loadingMore, images.length, loadImages]);
 
   const handleNewSeed = () => {
     const newSeed = Math.floor(Math.random() * 1_000_000);
