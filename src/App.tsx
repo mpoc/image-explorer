@@ -507,9 +507,11 @@ const Image = ({
           {image.id}
         </a>
       </div>
-      <div className="text-xs text-zinc-400">
-        {(1 - image.distance).toFixed(4)}
-      </div>
+      {image.distance !== undefined && (
+        <div className="text-xs text-zinc-400">
+          {(1 - image.distance).toFixed(4)}
+        </div>
+      )}
     </div>
   </div>
 );

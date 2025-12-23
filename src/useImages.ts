@@ -20,7 +20,7 @@ export type RandomResponse = {
 export type ImageResult = {
   id: number;
   filename: string;
-  distance: number;
+  distance?: number;
 };
 
 export type PathImage = {

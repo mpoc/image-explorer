@@ -20,6 +20,56 @@ const parseIdList = (idParam: string | null): number[] => {
     .filter((n) => !Number.isNaN(n));
 };
 
+const getRandomImages = async (
+  mode: "random_embedding" | "random_images",
+  seed: number,
+  limit: number,
+  offset: number
+) => {
+  // Get random images in a deterministic order
+  if (mode === "random_images") {
+    const randomOrder = sql<number>`((${embeddings.id} + ${seed}) * 2654435761) % 4294967296`;
+
+    const results = await db
+      .select({
+        id: embeddings.id,
+        filename: embeddings.filename,
+      })
+      .from(embeddings)
+      .where(eq(embeddings.model, MODEL_NAME))
+      .orderBy(asc(randomOrder))
+      .limit(limit)
+      .offset(offset)
+      .all();
+
+    return results;
+  }
+
+  // Find images similar to a random embedding
+  if (mode === "random_embedding") {
+    const seedEmbedding = generateEmbeddingFromSeed(seed);
+
+    const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(seedEmbedding)}))`;
+
+    const results = await db
+      .select({
+        id: embeddings.id,
+        filename: embeddings.filename,
+        distance: distanceExpression,
+      })
+      .from(embeddings)
+      .where(eq(embeddings.model, MODEL_NAME))
+      .orderBy(asc(distanceExpression))
+      .limit(limit)
+      .offset(offset)
+      .all();
+
+    return results;
+  }
+
+  throw new Error(`Unknown random mode: ${mode}`);
+};
+
 const server = serve({
   port: 3000,
   routes: {
@@ -30,25 +80,12 @@ const server = serve({
         const seed = number(url.searchParams.get("seed") || "42");
         const limit = number(url.searchParams.get("limit") || "40");
         const offset = number(url.searchParams.get("offset") || "0");
+        const mode = z
+          .enum(["random_embedding", "random_images"])
+          .parse(url.searchParams.get("mode") || "random_images");
 
         try {
-          const seedEmbedding = generateEmbeddingFromSeed(seed);
-
-          // Find images similar to this random embedding
-          const distanceExpression = sql<number>`vector_distance_cos(embedding, vector32(${JSON.stringify(seedEmbedding)}))`;
-
-          const results = await db
-            .select({
-              id: embeddings.id,
-              filename: embeddings.filename,
-              distance: distanceExpression,
-            })
-            .from(embeddings)
-            .where(eq(embeddings.model, MODEL_NAME))
-            .orderBy(asc(distanceExpression))
-            .limit(limit)
-            .offset(offset)
-            .all();
+          const results = await getRandomImages(mode, seed, limit, offset);
 
           console.log(
             `Generated ${results.length} random images for seed ${seed} (offset=${offset})`
