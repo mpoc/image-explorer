@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { CsvIds } from "./shared/utils";
+import { CsvIds } from "../shared/utils";
 
 export type SimilarResponse = {
   source: { id: number; filename: string }[];

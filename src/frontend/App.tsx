@@ -2,7 +2,7 @@ import "./index.css";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useState } from "react";
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
-import { CsvIds } from "./shared/utils";
+import { CsvIds } from "../shared/utils";
 import {
   type ImageResult,
   type PathImage,
