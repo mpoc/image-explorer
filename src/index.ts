@@ -8,8 +8,6 @@ import { computeTextEmbedding } from "./embeddings";
 import { generateEmbeddingFromSeed } from "./generateEmbeddingFromSeed";
 import { DEFAULT_EXTRAPOLATOR, getExtrapolator } from "./path-extrapolator";
 
-const number = (input: unknown): number => z.coerce.number().parse(input);
-
 const parseIdList = (idParam: string | null): number[] => {
   if (!idParam) {
     return [];
@@ -77,9 +75,16 @@ const server = serve({
     "/api/random": {
       async GET(req) {
         const url = new URL(req.url);
-        const seed = number(url.searchParams.get("seed") || "42");
-        const limit = number(url.searchParams.get("limit") || "40");
-        const offset = number(url.searchParams.get("offset") || "0");
+        const seed = z.coerce
+          .number()
+          .parse(url.searchParams.get("seed") || "42");
+        const limit = z.coerce
+          .number()
+          .max(200)
+          .parse(url.searchParams.get("limit") || "40");
+        const offset = z.coerce
+          .number()
+          .parse(url.searchParams.get("offset") || "0");
         const mode = z
           .enum(["random_embedding", "random_images"])
           .parse(url.searchParams.get("mode") || "random_images");
@@ -114,8 +119,13 @@ const server = serve({
       async GET(req) {
         const url = new URL(req.url);
         const idList = parseIdList(url.searchParams.get("id"));
-        const limit = number(url.searchParams.get("limit") || "40");
-        const offset = number(url.searchParams.get("offset") || "0");
+        const limit = z.coerce
+          .number()
+          .max(200)
+          .parse(url.searchParams.get("limit") || "40");
+        const offset = z.coerce
+          .number()
+          .parse(url.searchParams.get("offset") || "0");
 
         if (idList.length === 0) {
           return Response.json(
@@ -203,8 +213,13 @@ const server = serve({
       async GET(req) {
         const url = new URL(req.url);
         const text = url.searchParams.get("text");
-        const limit = number(url.searchParams.get("limit") || "40");
-        const offset = number(url.searchParams.get("offset") || "0");
+        const limit = z.coerce
+          .number()
+          .max(200)
+          .parse(url.searchParams.get("limit") || "40");
+        const offset = z.coerce
+          .number()
+          .parse(url.searchParams.get("offset") || "0");
 
         if (!text) {
           return Response.json(
