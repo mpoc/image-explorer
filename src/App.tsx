@@ -1,6 +1,7 @@
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
+import { useShowBackToTop } from "./useShowBackToTop";
 import { cn, shouldNavigateInPlace } from "./utils";
 import "./index.css";
 
@@ -58,7 +59,7 @@ export default function App() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showBackToTop, setShowBackToTop] = useState(false);
+  const showBackToTop = useShowBackToTop(400);
   const [query, setQuery] = useQueryStates({
     seed: parseAsInteger.withDefault(42),
     id: parseAsString,
@@ -84,15 +85,6 @@ export default function App() {
   useEffect(() => {
     setSearchInput(text || "");
   }, [text]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowBackToTop(window.scrollY > 400);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   // Reset and load initial images when query params change
   useEffect(() => {
@@ -537,7 +529,7 @@ const PathVisualization = ({
               </div>
             </div>
             {index < idList.length - 1 && (
-              <div className="flex-shrink-0 text-zinc-600">→</div>
+              <div className="shrink-0 text-zinc-600">→</div>
             )}
           </div>
         );
