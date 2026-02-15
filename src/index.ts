@@ -1,6 +1,6 @@
 import Bun, { serve } from "bun";
 import { z } from "zod";
-import { MODEL_NAME } from "./config";
+import { CANONICAL_MODEL_NAME } from "./config";
 import { computeTextEmbedding } from "./embeddings";
 import dashboard from "./frontend/dashboard.html";
 import { DEFAULT_EXTRAPOLATOR, getExtrapolator } from "./path-extrapolator";
@@ -49,7 +49,7 @@ const server = serve({
               message: "No images found for random seed",
               seed,
               limit,
-              model: MODEL_NAME,
+              model: CANONICAL_MODEL_NAME,
             });
           }
 

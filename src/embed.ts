@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { MODEL_NAME } from "./config";
+import { CANONICAL_MODEL_NAME } from "./config";
 import { db, embeddings } from "./db";
 import { computeImageEmbedding } from "./embeddings";
 
@@ -7,7 +7,7 @@ const generateIdempotencyKey = (filename: string, model: string): string =>
   `${filename}:${model}` as const;
 
 const getEmbedding = async (imagePath: string): Promise<number[]> => {
-  const idempotencyKey = generateIdempotencyKey(imagePath, MODEL_NAME);
+  const idempotencyKey = generateIdempotencyKey(imagePath, CANONICAL_MODEL_NAME);
 
   const cached = await db
     .select()
@@ -29,7 +29,7 @@ const getEmbedding = async (imagePath: string): Promise<number[]> => {
   await db.insert(embeddings).values({
     idempotencyKey,
     filename: imagePath,
-    model: MODEL_NAME,
+    model: CANONICAL_MODEL_NAME,
     embedding: embeddingArray,
   });
 

@@ -1,3 +1,4 @@
 {
-  "modelName": "openai/clip-vit-base-patch32"
+  "modelName": "Xenova/clip-vit-base-patch32",
+  "canonicalModelName": "openai/clip-vit-base-patch32"
 }

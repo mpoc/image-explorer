@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, not, sql } from "drizzle-orm";
-import { MODEL_NAME } from "./config";
+import { CANONICAL_MODEL_NAME } from "./config";
 import { db, embeddings } from "./db";
 import { generateEmbeddingFromSeed } from "./generateEmbeddingFromSeed";
 
@@ -30,7 +30,7 @@ export const fetchSimilarImages = async ({
     .where(
       and(
         not(inArray(embeddings.id, excludeIds)),
-        eq(embeddings.model, MODEL_NAME)
+        eq(embeddings.model, CANONICAL_MODEL_NAME)
       )
     )
     .orderBy(asc(distanceExpression))
@@ -60,7 +60,7 @@ export const getRandomImages = async (
         filename: embeddings.filename,
       })
       .from(embeddings)
-      .where(eq(embeddings.model, MODEL_NAME))
+      .where(eq(embeddings.model, CANONICAL_MODEL_NAME))
       .orderBy(asc(randomOrder))
       .limit(limit)
       .offset(offset)
@@ -94,6 +94,6 @@ export const fetchImagesByIds = async (idList: number[]) =>
     })
     .from(embeddings)
     .where(
-      and(inArray(embeddings.id, idList), eq(embeddings.model, MODEL_NAME))
+      and(inArray(embeddings.id, idList), eq(embeddings.model, CANONICAL_MODEL_NAME))
     )
     .all();
